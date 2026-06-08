@@ -4,6 +4,7 @@ import { Link, useNavigate, useParams } from 'react-router-dom';
 import { ArrowLeft, ArrowRight, CheckCircle2, FileText, Image as ImageIcon, PlayCircle } from 'lucide-react';
 import { Badge } from '@/components/ui/badge.jsx';
 import { Button } from '@/components/ui/button.jsx';
+import LearningRichContentRenderer from '@/components/LearningRichContentRenderer.jsx';
 import {
   getLearningAssetUrl,
   getLearningLesson,
@@ -16,6 +17,7 @@ import {
   getLearningProgressStatusLabel,
   getMinutesLabel,
 } from '@/lib/learningPresentation.js';
+import { normalizeLearningRichBlocks } from '@/lib/learningRichContent.js';
 import { getLearningSubtopicPath, getLearningTopicPath } from '@/lib/learningRoutes.js';
 import {
   getSubscriptionNoAccessBodyKey,
@@ -25,11 +27,6 @@ import { useAuth } from '@/contexts/AuthContext.jsx';
 import { useTranslation } from '@/contexts/TranslationContext.jsx';
 import pb from '@/lib/pocketbaseClient.js';
 import { toast } from 'sonner';
-
-const getLearningTextBlocks = (value) => String(value || '')
-  .split(/\n{2,}/)
-  .map((block) => block.trim())
-  .filter(Boolean);
 
 const getPreviewKindFromMime = (mimeType = '') => {
   const normalized = String(mimeType || '').toLowerCase();
@@ -332,8 +329,9 @@ const LearningLessonPage = () => {
   const hasDownload = Boolean(downloadAssetUrl);
   const hasResources = hasPdf || hasDownload || attachments.length > 0;
   const hasTopMaterial = hasVideo || hasResources;
-  const textBlocks = getLearningTextBlocks(data.lesson.textContent);
-  const hasTextContent = textBlocks.length > 0;
+  const richContentBlocks = normalizeLearningRichBlocks(data.lesson.richContent, data.lesson.textContent)
+    .filter((block) => block.type !== 'paragraph' || block.text.trim());
+  const hasTextContent = richContentBlocks.length > 0;
   const contentTypeLabel = getLearningContentTypeLabel(t, data.lesson.contentType);
 
   const getPreviewKind = (assetUrl, label = '') => {
@@ -469,18 +467,10 @@ const LearningLessonPage = () => {
                       <h2 className="mt-2 text-2xl font-semibold text-slate-900">{t('learning.lesson_content')}</h2>
                     </div>
                     <Badge className="rounded-[8px] bg-slate-100 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-600 shadow-none">
-                      {textBlocks.length} {textBlocks.length === 1 ? t('learning.section_count_single') : t('learning.section_count_plural')}
+                      {richContentBlocks.length} {richContentBlocks.length === 1 ? t('learning.section_count_single') : t('learning.section_count_plural')}
                     </Badge>
                   </div>
-                  <div className="mt-6 space-y-5">
-                    {textBlocks.map((block, index) => (
-                      <section key={`${data.lesson.id}-content-${index}`} className="border-l-2 border-[#0000FF]/18 pl-5">
-                        <p className={index === 0 ? 'text-lg leading-8 text-slate-700' : 'text-base leading-7 text-slate-600'}>
-                          {block}
-                        </p>
-                      </section>
-                    ))}
-                  </div>
+                  <LearningRichContentRenderer className="mt-6" blocks={richContentBlocks} fallbackText={data.lesson.textContent} />
                 </article>
               )}
             </div>

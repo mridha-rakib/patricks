@@ -35,6 +35,7 @@ import { Badge } from '@/components/ui/badge.jsx';
 import { Button } from '@/components/ui/button.jsx';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card.jsx';
 import { Input } from '@/components/ui/input.jsx';
+import LearningRichContentEditor from '@/components/LearningRichContentEditor.jsx';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table.jsx';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs.jsx';
 import { Textarea } from '@/components/ui/textarea.jsx';
@@ -62,6 +63,7 @@ import {
   getSubscriptionDisplayEndDate,
   getSubscriptionStatusLabel,
 } from '@/lib/subscriptionStatus.js';
+import { getLearningRichPlainText, textContentToRichBlocks } from '@/lib/learningRichContent.js';
 import pb from '@/lib/pocketbaseClient.js';
 import { useTranslation } from '@/contexts/TranslationContext.jsx';
 
@@ -125,12 +127,14 @@ const emptyLessonForm = {
   contentType: 'mixed',
   videoUrl: '',
   textContent: '',
+  richContent: [],
   pdfUrl: '',
   downloadUrl: '',
   attachmentsText: '',
   estimatedMinutes: '12',
   position: '1',
   isPreview: false,
+  hasUnpublishedChanges: false,
   afterLessonId: '',
 };
 
@@ -357,9 +361,9 @@ const LearningAdminPage = () => {
   const [couponForm, setCouponForm] = useState(emptyCouponForm);
   const [subscriberStatusFilter, setSubscriberStatusFilter] = useState('all');
   const [mediaUploading, setMediaUploading] = useState('');
-  const [activeSection, setActiveSection] = useState('overview');
-  const [builderPanel, setBuilderPanel] = useState('package');
-  const [curriculumEditorMode, setCurriculumEditorMode] = useState('module');
+  const [activeSection, setActiveSection] = useState('editor');
+  const [builderPanel, setBuilderPanel] = useState('curriculum');
+  const [curriculumEditorMode, setCurriculumEditorMode] = useState('lesson');
   const [selectedPackageId, setSelectedPackageId] = useState('');
   const [packageSearch, setPackageSearch] = useState('');
   const [draggedModuleId, setDraggedModuleId] = useState('');
@@ -403,6 +407,20 @@ const LearningAdminPage = () => {
     if (selectedPackageId && content.packages.some((item) => item.id === selectedPackageId)) return;
     setSelectedPackageId(content.packages[0]?.id || '');
   }, [content.packages, selectedPackageId]);
+
+  useEffect(() => {
+    if (!selectedPackageId || lessonForm.id || lessonForm.moduleId) return;
+    const firstModule = content.modules.find((item) => item.packageId === selectedPackageId);
+    if (!firstModule) return;
+
+    setLessonForm((current) => ({
+      ...current,
+      packageId: selectedPackageId,
+      moduleId: firstModule.id,
+      position: getNextLessonPosition(firstModule.id),
+      afterLessonId: getLastLessonId(firstModule.id),
+    }));
+  }, [content.modules, lessonForm.id, lessonForm.moduleId, selectedPackageId]);
 
   const lessonPackageId = lessonForm.packageId || selectedPackageId;
   const modulesForSelectedPackage = useMemo(
@@ -673,23 +691,30 @@ const LearningAdminPage = () => {
   };
 
   const hydrateLessonForm = (item) => {
+    const draft = item.hasUnpublishedChanges && item.draft ? item.draft : null;
     setLessonForm({
       id: item.id,
       packageId: item.packageId || '',
       moduleId: item.moduleId || '',
       slug: item.slug || '',
-      title: item.title || '',
-      description: item.description || '',
+      title: draft?.title || item.title || '',
+      description: draft?.description || item.description || '',
       status: item.releaseState || item.status || 'draft',
-      contentType: item.contentType || 'mixed',
-      videoUrl: item.videoUrl || '',
-      textContent: item.textContent || '',
-      pdfUrl: item.pdfUrl || '',
-      downloadUrl: item.downloadUrl || '',
-      attachmentsText: formatAttachments(item.attachments),
+      contentType: draft?.contentType || item.contentType || 'mixed',
+      videoUrl: draft?.videoUrl || item.videoUrl || '',
+      textContent: draft?.textContent || item.textContent || '',
+      richContent: Array.isArray(draft?.richContent) && draft.richContent.length > 0
+        ? draft.richContent
+        : Array.isArray(item.richContent) && item.richContent.length > 0
+          ? item.richContent
+          : textContentToRichBlocks(item.textContent || ''),
+      pdfUrl: draft?.pdfUrl || item.pdfUrl || '',
+      downloadUrl: draft?.downloadUrl || item.downloadUrl || '',
+      attachmentsText: formatAttachments(draft?.attachments || item.attachments),
       estimatedMinutes: String(item.estimatedMinutes ?? 0),
       position: String(item.order ?? item.position ?? 0),
       isPreview: item.isPreview === true,
+      hasUnpublishedChanges: item.hasUnpublishedChanges === true,
       afterLessonId: getPreviousItemId(
         content.lessons.filter((lessonItem) => lessonItem.moduleId === item.moduleId),
         item.id
@@ -1023,6 +1048,8 @@ const LearningAdminPage = () => {
 
     try {
       const packageId = lessonForm.packageId || selectedPackageId;
+      const saveMode = event.nativeEvent?.submitter?.value || 'save';
+      const richPlainText = getLearningRichPlainText(lessonForm.richContent);
       const payload = {
         ...lessonForm,
         slug: getUniqueSlug({
@@ -1031,6 +1058,10 @@ const LearningAdminPage = () => {
           records: content.lessons,
         }),
         packageId,
+        saveMode,
+        status: saveMode === 'publish' ? 'published' : saveMode === 'draft' ? 'draft' : lessonForm.status,
+        textContent: richPlainText || lessonForm.textContent || '',
+        richContent: lessonForm.richContent,
         attachments: parseAttachments(lessonForm.attachmentsText),
         estimatedMinutes: Number(lessonForm.estimatedMinutes || 0),
         position: Number(lessonForm.position || 0),
@@ -1187,6 +1218,23 @@ const LearningAdminPage = () => {
     } catch (error) {
       console.error('Failed to upload learning package image:', error);
       toast.error(error.message || t('learning.admin_media_upload_error'));
+    } finally {
+      setMediaUploading('');
+    }
+  };
+
+  const uploadLessonInlineImage = async (file) => {
+    if (!file) return null;
+
+    setMediaUploading('richContentImage');
+    try {
+      const record = await uploadLearningAdminMedia({ token, file, mediaType: 'image', label: file.name });
+      toast.success(t('learning.admin_media_upload_success'));
+      return record;
+    } catch (error) {
+      console.error('Failed to upload inline learning image:', error);
+      toast.error(error.message || t('learning.admin_media_upload_error'));
+      return null;
     } finally {
       setMediaUploading('');
     }
@@ -2142,7 +2190,17 @@ const LearningAdminPage = () => {
                             </label>
                             <Input required value={lessonForm.title} onChange={(event) => setLessonForm((current) => ({ ...current, title: event.target.value }))} placeholder={t('learning.admin_lesson_title')} />
                             <Textarea value={lessonForm.description} onChange={(event) => setLessonForm((current) => ({ ...current, description: event.target.value }))} placeholder={t('learning.admin_lesson_description')} />
-                            <Textarea value={lessonForm.textContent} onChange={(event) => setLessonForm((current) => ({ ...current, textContent: event.target.value }))} placeholder={t('learning.lesson_notes')} />
+                            <LearningRichContentEditor
+                              value={lessonForm.richContent}
+                              fallbackText={lessonForm.textContent}
+                              uploading={mediaUploading === 'richContentImage'}
+                              onUploadImage={uploadLessonInlineImage}
+                              onChange={(richContent) => setLessonForm((current) => ({
+                                ...current,
+                                richContent,
+                                textContent: getLearningRichPlainText(richContent),
+                              }))}
+                            />
                             <label className="block space-y-1">
                               <span className="text-xs font-semibold uppercase tracking-[0.12em] text-slate-500">{copy('learning.admin_place_after', 'Place after')}</span>
                               <select
@@ -2179,10 +2237,38 @@ const LearningAdminPage = () => {
                               <input type="checkbox" checked={lessonForm.isPreview} onChange={(event) => setLessonForm((current) => ({ ...current, isPreview: event.target.checked }))} />
                               {copy('learning.admin_lesson_free_preview', 'Make this lesson available as free preview')}
                             </label>
-                            <FormActions primaryLabel={lessonForm.id ? t('learning.admin_save') : copy('learning.admin_create_lesson', 'Create lesson')} resetLabel={t('learning.admin_reset')} onReset={() => {
-                              const moduleId = modulesForSelectedPackage[0]?.id || '';
-                              setLessonForm({ ...emptyLessonForm, packageId: selectedPackageId || '', moduleId, position: getNextLessonPosition(moduleId) });
-                            }} />
+                            <div className="rounded-[8px] border border-blue-100 bg-blue-50/70 p-3 text-sm text-slate-700">
+                              <p className="font-semibold text-slate-900">
+                                {lessonForm.hasUnpublishedChanges
+                                  ? copy('learning.admin_unpublished_changes', 'Unpublished draft changes are loaded in this editor.')
+                                  : copy('learning.admin_draft_publish_hint_title', 'Draft and publish')}
+                              </p>
+                              <p className="mt-1">
+                                {copy('learning.admin_draft_publish_hint', 'Save Draft keeps published lessons visible as they are. Publish makes the editor version visible to learners.')}
+                              </p>
+                            </div>
+                            <div className="flex flex-wrap gap-3">
+                              <Button type="submit" name="saveMode" value="draft" variant="outline" className="flex-1 rounded-[8px]">
+                                {copy('learning.admin_save_draft', 'Save draft')}
+                              </Button>
+                              <Button type="submit" name="saveMode" value="publish" className="flex-1 rounded-[8px] bg-[#0000FF] text-white hover:bg-[#0000CC]">
+                                {copy('learning.admin_publish_lesson', 'Publish')}
+                              </Button>
+                              {lessonForm.id && (
+                                <Button type="button" variant="outline" className="rounded-[8px]" asChild>
+                                  <Link to={`/learning/lessons/${lessonForm.id}`} target="_blank" rel="noreferrer">
+                                    <Eye className="size-4" />
+                                    {copy('learning.admin_preview_as_learner', 'Preview as learner')}
+                                  </Link>
+                                </Button>
+                              )}
+                              <Button type="button" variant="outline" className="rounded-[8px]" onClick={() => {
+                                const moduleId = modulesForSelectedPackage[0]?.id || '';
+                                setLessonForm({ ...emptyLessonForm, packageId: selectedPackageId || '', moduleId, position: getNextLessonPosition(moduleId) });
+                              }}>
+                                {t('learning.admin_reset')}
+                              </Button>
+                            </div>
                           </form>
                         </div>
                       )}

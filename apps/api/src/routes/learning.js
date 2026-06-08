@@ -67,6 +67,206 @@ const safeJson = (value, fallback = []) => {
   }
 };
 
+const LEARNING_RICH_TEXT_SIZES = new Set(['small', 'normal', 'large', 'heading']);
+const LEARNING_RICH_BLOCK_TYPES = new Set(['paragraph', 'image', 'table', 'list']);
+
+const sanitizeText = (value, maxLength = 12000) =>
+  String(value || '').split(String.fromCharCode(0)).join('').slice(0, maxLength);
+
+const sanitizeLearningRichUrl = (value) => {
+  const normalized = String(value || '').trim();
+  if (!normalized) return '';
+
+  try {
+    const url = new URL(normalized, FRONTEND_URL);
+    if (!['http:', 'https:'].includes(url.protocol)) {
+      return '';
+    }
+    return normalized;
+  } catch {
+    return '';
+  }
+};
+
+const textContentToRichBlocks = (value) =>
+  String(value || '')
+    .split(/\n{2,}/)
+    .map((text) => text.trim())
+    .filter(Boolean)
+    .slice(0, 80)
+    .map((text, index) => ({
+      id: `legacy_text_${index}`,
+      type: 'paragraph',
+      text: sanitizeText(text),
+      spans: [{
+        text: sanitizeText(text),
+        size: index === 0 ? 'large' : 'normal',
+        bold: false,
+      }],
+      size: index === 0 ? 'large' : 'normal',
+      bold: false,
+    }));
+
+const sanitizeInlineSpans = (spans, fallbackText = '', fallback = {}) => {
+  const source = Array.isArray(spans) && spans.length > 0
+    ? spans
+    : [{
+      text: fallbackText,
+      bold: fallback.bold === true,
+      size: fallback.size || 'normal',
+    }];
+
+  const merged = [];
+  source
+    .slice(0, 300)
+    .map((span) => ({
+      text: sanitizeText(span?.text),
+      bold: span?.bold === true,
+      size: LEARNING_RICH_TEXT_SIZES.has(span?.size) ? span.size : 'normal',
+    }))
+    .filter((span) => span.text.length > 0)
+    .forEach((span) => {
+      const previous = merged.at(-1);
+      if (previous && previous.bold === span.bold && previous.size === span.size) {
+        previous.text += span.text;
+      } else {
+        merged.push({ ...span });
+      }
+    });
+
+  return merged;
+};
+
+const sanitizeLearningRichContent = (value, fallbackText = '') => {
+  const rawBlocks = Array.isArray(value) && value.length > 0
+    ? value
+    : textContentToRichBlocks(fallbackText);
+
+  return rawBlocks
+    .slice(0, 120)
+    .map((block, index) => {
+      const type = LEARNING_RICH_BLOCK_TYPES.has(block?.type) ? block.type : 'paragraph';
+      const id = sanitizeText(block?.id || `learning_block_${index}`, 80);
+
+      if (type === 'image') {
+        const url = sanitizeLearningRichUrl(block?.url);
+        if (!url) return null;
+        return {
+          id,
+          type: 'image',
+          url,
+          alt: sanitizeText(block?.alt, 300),
+          caption: sanitizeText(block?.caption, 500),
+        };
+      }
+
+      if (type === 'table') {
+        const header = (Array.isArray(block?.header) ? block.header : [])
+          .slice(0, 12)
+          .map((cell) => sanitizeText(cell, 1000));
+        const rows = (Array.isArray(block?.rows) ? block.rows : [])
+          .slice(0, 50)
+          .map((row) => (Array.isArray(row) ? row : [])
+            .slice(0, 12)
+            .map((cell) => sanitizeText(cell, 1000)))
+          .filter((row) => row.length > 0);
+
+        if (header.length === 0 && rows.length === 0) return null;
+        return {
+          id,
+          type: 'table',
+          header,
+          rows,
+        };
+      }
+
+      if (type === 'list') {
+        const items = (Array.isArray(block?.items) ? block.items : [])
+          .slice(0, 50)
+          .map((item) => sanitizeText(item, 1000))
+          .filter((item) => item.trim());
+        if (items.length === 0) return null;
+        return {
+          id,
+          type: 'list',
+          items,
+        };
+      }
+
+      const size = LEARNING_RICH_TEXT_SIZES.has(block?.size) ? block.size : 'normal';
+      const spans = sanitizeInlineSpans(block?.spans, block?.text, {
+        bold: block?.bold === true,
+        size,
+      });
+      const text = spans.map((span) => span.text).join('') || sanitizeText(block?.text);
+      if (!text.trim()) return null;
+      return {
+        id,
+        type: 'paragraph',
+        text,
+        spans,
+        size,
+        bold: block?.bold === true,
+      };
+    })
+    .filter(Boolean);
+};
+
+const getLearningRichPlainText = (blocks, fallbackText = '') => {
+  const sanitizedBlocks = sanitizeLearningRichContent(blocks, fallbackText);
+  const text = sanitizedBlocks
+    .map((block) => {
+      if (block.type === 'image') {
+        return [block.alt, block.caption].filter(Boolean).join(' ');
+      }
+      if (block.type === 'table') {
+        return [
+          ...(block.header || []),
+          ...(block.rows || []).flat(),
+        ].join(' ');
+      }
+      if (block.type === 'list') {
+        return (block.items || []).join(' ');
+      }
+      return Array.isArray(block.spans) && block.spans.length > 0
+        ? block.spans.map((span) => span.text).join('')
+        : block.text;
+    })
+    .filter(Boolean)
+    .join('\n\n')
+    .trim();
+
+  return text || String(fallbackText || '').trim();
+};
+
+const getAdminLessonDraftPayload = ({ requestBody, richContent, textContent }) => ({
+  draft_title: requestBody?.title,
+  draft_description: requestBody?.description,
+  draft_content_type: requestBody?.contentType,
+  draft_video_url: requestBody?.videoUrl,
+  draft_text_content: textContent,
+  draft_rich_content: richContent,
+  draft_material_url: requestBody?.materialUrl,
+  draft_pdf_url: requestBody?.pdfUrl,
+  draft_download_url: requestBody?.downloadUrl,
+  draft_attachments: requestBody?.attachments,
+  has_unpublished_changes: true,
+});
+
+const clearAdminLessonDraftPayload = {
+  has_unpublished_changes: false,
+  draft_title: '',
+  draft_description: '',
+  draft_content_type: '',
+  draft_video_url: '',
+  draft_text_content: '',
+  draft_rich_content: [],
+  draft_material_url: '',
+  draft_pdf_url: '',
+  draft_download_url: '',
+  draft_attachments: [],
+};
+
 const escapePbString = (value) => String(value || '').replace(/\\/g, '\\\\').replace(/"/g, '\\"');
 
 const toBase64Url = (value) => Buffer.from(value).toString('base64url');
@@ -607,13 +807,29 @@ const serializeLesson = (record, { includeAssetSources = false } = {}) => ({
   status: record.status || 'draft',
   releaseState: record.status || 'draft',
   contentType: record.content_type || 'video',
+  hasUnpublishedChanges: record.has_unpublished_changes === true,
   ...(includeAssetSources ? { videoUrl: record.video_url || '' } : {}),
   ...(includeAssetSources ? { textContent: record.text_content || '' } : {}),
+  ...(includeAssetSources ? { richContent: sanitizeLearningRichContent(safeJson(record.rich_content), record.text_content || '') } : {}),
   ...(includeAssetSources ? { pdfUrl: record.pdf_url || record.material_url || '' } : {}),
   ...(includeAssetSources ? { downloadUrl: record.download_url || '' } : {}),
   ...(includeAssetSources ? { materialUrl: record.material_url || '' } : {}),
   ...(includeAssetSources ? { attachments: safeJson(record.attachments) } : { attachments: [] }),
-  hasText: Boolean(String(record.text_content || '').trim()),
+  ...(includeAssetSources ? {
+    draft: record.has_unpublished_changes === true ? {
+      title: record.draft_title || record.title || '',
+      description: record.draft_description || record.description || '',
+      contentType: record.draft_content_type || record.content_type || 'mixed',
+      videoUrl: record.draft_video_url || '',
+      textContent: record.draft_text_content || '',
+      richContent: sanitizeLearningRichContent(safeJson(record.draft_rich_content), record.draft_text_content || ''),
+      pdfUrl: record.draft_pdf_url || record.draft_material_url || '',
+      downloadUrl: record.draft_download_url || '',
+      materialUrl: record.draft_material_url || '',
+      attachments: safeJson(record.draft_attachments),
+    } : null,
+  } : {}),
+  hasText: Boolean(getLearningRichPlainText(safeJson(record.rich_content), record.text_content || '').trim()),
   hasVideo: Boolean(resolveMediaUrl(record.video_url)),
   hasPdf: Boolean(resolveMediaUrl(record.pdf_url || record.material_url)),
   hasDownload: Boolean(resolveMediaUrl(record.download_url)),
@@ -3098,12 +3314,13 @@ router.get('/search', requireAuth, async (req, res) => {
     for (const lessonRecord of lessons) {
       const moduleRecord = moduleById.get(String(lessonRecord.module_id || ''));
       if (!moduleRecord) continue;
+      const lessonSearchText = getLearningRichPlainText(safeJson(lessonRecord.rich_content), lessonRecord.text_content);
 
       const score = getLearningSearchScore({
         query,
         title: lessonRecord.title,
         description: lessonRecord.description,
-        body: lessonRecord.text_content,
+        body: lessonSearchText,
         slug: lessonRecord.slug,
       });
 
@@ -3117,7 +3334,7 @@ router.get('/search', requireAuth, async (req, res) => {
         description: lessonRecord.description || '',
         excerpt: buildLearningSearchExcerpt({
           query,
-          fields: [lessonRecord.title, lessonRecord.description, lessonRecord.text_content, lessonRecord.slug],
+          fields: [lessonRecord.title, lessonRecord.description, lessonSearchText, lessonRecord.slug],
         }),
         package: {
           id: packageRecord.id,
@@ -3651,6 +3868,7 @@ const sendLearningLessonResponse = async (req, res, lessonRecord) => {
     lesson: {
       ...currentLesson,
       textContent: lessonRecord.text_content || '',
+      richContent: sanitizeLearningRichContent(safeJson(lessonRecord.rich_content), lessonRecord.text_content || ''),
       progress,
       ...protectedAssets,
     },
@@ -4391,6 +4609,8 @@ router.delete('/admin/modules/:id', requireAuth, admin, async (req, res) => {
 });
 
 router.post('/admin/lessons', requireAuth, admin, async (req, res) => {
+  const richContent = sanitizeLearningRichContent(req.body?.richContent, req.body?.textContent || '');
+  const textContent = getLearningRichPlainText(richContent, req.body?.textContent || '');
   const payload = {
     package_id: String(req.body?.packageId || '').trim(),
     module_id: String(req.body?.moduleId || '').trim(),
@@ -4400,7 +4620,8 @@ router.post('/admin/lessons', requireAuth, admin, async (req, res) => {
     status: ['draft', 'published'].includes(req.body?.status ?? req.body?.releaseState) ? (req.body?.status ?? req.body?.releaseState) : 'draft',
     content_type: ['video', 'text', 'pdf', 'download', 'mixed'].includes(req.body?.contentType) ? req.body.contentType : 'mixed',
     video_url: String(req.body?.videoUrl || '').trim(),
-    text_content: String(req.body?.textContent || '').trim(),
+    text_content: textContent,
+    rich_content: richContent,
     material_url: String(req.body?.materialUrl || '').trim(),
     pdf_url: String(req.body?.pdfUrl || '').trim(),
     download_url: String(req.body?.downloadUrl || '').trim(),
@@ -4451,6 +4672,15 @@ router.put('/admin/lessons/:id', requireAuth, admin, async (req, res) => {
     return res.status(404).json({ error: 'Learning lesson not found' });
   }
 
+  const saveMode = ['draft', 'publish'].includes(req.body?.saveMode) ? req.body.saveMode : 'save';
+  const richContentWasProvided = req.body?.richContent !== undefined;
+  const richContent = richContentWasProvided
+    ? sanitizeLearningRichContent(req.body?.richContent, req.body?.textContent || existingRecord.text_content || '')
+    : undefined;
+  const textContent = richContentWasProvided
+    ? getLearningRichPlainText(richContent, req.body?.textContent || existingRecord.text_content || '')
+    : req.body?.textContent;
+
   const payload = {
     package_id: req.body?.packageId,
     module_id: req.body?.moduleId,
@@ -4460,7 +4690,8 @@ router.put('/admin/lessons/:id', requireAuth, admin, async (req, res) => {
     status: req.body?.status ?? req.body?.releaseState,
     content_type: req.body?.contentType,
     video_url: req.body?.videoUrl,
-    text_content: req.body?.textContent,
+    text_content: textContent,
+    rich_content: richContent,
     material_url: req.body?.materialUrl,
     pdf_url: req.body?.pdfUrl,
     download_url: req.body?.downloadUrl,
@@ -4470,6 +4701,49 @@ router.put('/admin/lessons/:id', requireAuth, admin, async (req, res) => {
     estimated_minutes: req.body?.estimatedMinutes,
   };
   Object.keys(payload).forEach((key) => payload[key] === undefined && delete payload[key]);
+
+  if (saveMode === 'draft' && existingRecord.status === 'published') {
+    const draftPayload = getAdminLessonDraftPayload({
+      requestBody: req.body,
+      richContent,
+      textContent,
+    });
+    Object.keys(draftPayload).forEach((key) => draftPayload[key] === undefined && delete draftPayload[key]);
+
+    const draftModuleId = req.body?.moduleId || existingRecord.module_id;
+    const draftPackageId = req.body?.packageId || existingRecord.package_id;
+    const moduleRecord = await pb.collection('learning_modules').getOne(draftModuleId, {
+      $autoCancel: false,
+    }).catch(() => null);
+    if (!moduleRecord) {
+      return res.status(404).json({ error: 'Learning module not found' });
+    }
+    if (draftPackageId && moduleRecord.package_id !== draftPackageId) {
+      return res.status(400).json({ error: 'Lesson package must match the selected module package' });
+    }
+
+    const updatedRecord = await pb.collection('learning_lessons').update(req.params.id, draftPayload);
+    await logLearningAdminAction({
+      actorUserId: req.auth.id,
+      eventType: 'admin_lesson_draft_saved',
+      targetType: 'lesson',
+      targetId: updatedRecord.id,
+      packageId: updatedRecord.package_id,
+      payload: {
+        title: draftPayload.draft_title || updatedRecord.title,
+        status: updatedRecord.status,
+      },
+    });
+    return res.json(serializeLesson(updatedRecord, { includeAssetSources: true }));
+  }
+
+  if (saveMode === 'publish') {
+    Object.assign(payload, {
+      status: 'published',
+      ...clearAdminLessonDraftPayload,
+    });
+  }
+
   const mergedPayload = mergeRecordPayload(existingRecord, payload);
   const missingFields = getMissingAdminLessonFields(mergedPayload);
   if (missingFields.length > 0) {
@@ -4555,6 +4829,7 @@ router.post('/admin/lessons/:id/duplicate', requireAuth, admin, async (req, res)
     content_type: sourceLesson.content_type || 'mixed',
     video_url: sourceLesson.video_url || '',
     text_content: sourceLesson.text_content || '',
+    rich_content: sanitizeLearningRichContent(safeJson(sourceLesson.rich_content), sourceLesson.text_content || ''),
     material_url: sourceLesson.material_url || '',
     pdf_url: sourceLesson.pdf_url || '',
     download_url: sourceLesson.download_url || '',

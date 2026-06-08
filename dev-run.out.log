@@ -1,0 +1,64 @@
+
+> monorepo@0.0.0 predev
+> node scripts/check-dev-ports.mjs 3000 3001 8090
+
+[check-dev-ports] Required dev ports are free: 3000, 3001, 8090
+
+> monorepo@0.0.0 dev
+> concurrently --kill-others --raw "npm run dev --prefix apps/pocketbase" "node scripts/wait-for-port.mjs 127.0.0.1 8090 30000 && npm run dev --prefix apps/api" "node scripts/wait-for-port.mjs 127.0.0.1 8090 30000 && node scripts/wait-for-port.mjs 127.0.0.1 3001 30000 && npm run dev --prefix apps/web"
+
+
+> pocketbase-app@0.0.0 dev
+> npm run migrations:up --silent && node scripts/run-pocketbase.mjs serve --http=127.0.0.1:8090 --dir=./pb_data_local --migrationsDir=./pb_migrations --hooksDir=./pb_hooks --encryptionEnv=PB_ENCRYPTION_KEY --hooksWatch=false
+
+No new migrations to apply.
+2026/06/09 05:34:18 Server started at http://127.0.0.1:8090
+├─ REST API:  http://127.0.0.1:8090/api/
+└─ Dashboard: http://127.0.0.1:8090/_/
+[wait-for-port] 127.0.0.1:8090 is ready
+[wait-for-port] 127.0.0.1:8090 is ready
+
+> api@0.0.0 dev
+> node --watch --watch-path=src --watch-path=.env src/main.js
+
+[INFO] Connecting to PocketBase at http://127.0.0.1:8090
+[INFO] [CHECKOUT] Configuration loaded from environment variables
+[INFO] [CHECKOUT] Frontend URL: https://android-immature-scarring.ngrok-free.dev
+[INFO] [DHL-SERVICE] DHL Configuration loaded from environment variables
+[INFO] [DHL-SERVICE] Token URL: https://api-eu.dhl.com/parcel/de/account/auth/ropc/v1/token
+[INFO] [DHL-SERVICE] Shipping URL: https://api-eu.dhl.com/parcel/de/shipping/v2/orders
+[INFO] [DHL-SERVICE] Warehouse: Patrick Tchoquessi, Angelika-machinek-Straße 12, 60486 Frankfurt, DE
+[INFO] [MAIN] Registering Stripe webhook handler
+[INFO] [MAIN] Registering auth middleware BEFORE routes
+[INFO] [MAIN] Mounting routes
+[INFO] [ROUTES] Registering /checkout routes
+[INFO] [ROUTES] Registering /dhl-labels routes
+[INFO] [ROUTES] Registering /tracking routes
+[INFO] [ROUTES] Registering /favorites routes
+[INFO] [ROUTES] Registering /admin routes
+[INFO] [ROUTES] Registering /email routes
+[INFO] [ROUTES] Registering /verification routes
+[INFO] [ROUTES] Registering /orders routes
+[INFO] [ROUTES] Registering /returns routes
+[INFO] [ROUTES] Registering /search routes
+[INFO] [ROUTES] Registering /settings routes
+[INFO] [ROUTES] Registering /seller routes
+[INFO] [ROUTES] Registering /learning routes
+[INFO] [ROUTES] Registering /marketplace routes
+[INFO] [ROUTES] Registering /shop routes
+[INFO] [ROUTES] Registering /reviews routes
+[INFO] [ROUTES] Stripe webhook is registered in main.js with express.raw() middleware
+[INFO] [ROUTES] All routes registered successfully
+[INFO] 🚀 API Server running on http://localhost:3001
+[INFO] PocketBase client initialized successfully
+[wait-for-port] 127.0.0.1:3001 is ready
+
+> web@0.0.0 dev
+> vite --host :: --port 3000 --strictPort
+
+
+  [32m[1mVITE[22m v7.3.1[39m  [2mready in [0m[1m383[22m[2m[0m ms[22m
+
+  [32m➜[39m  [1mLocal[22m:   [36mhttp://localhost:[1m3000[22m/[39m
+  [32m➜[39m  [1mNetwork[22m: [36mhttp://10.10.20.21:[1m3000[22m/[39m
+  [32m➜[39m  [1mNetwork[22m: [36mhttp://172.22.240.1:[1m3000[22m/[39m
