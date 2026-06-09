@@ -6,6 +6,7 @@ import pb from '@/lib/pocketbaseClient.js';
 import { useAuth } from '@/contexts/AuthContext.jsx';
 import { useCart } from '@/contexts/CartContext.jsx';
 import { useFavorites } from '@/contexts/FavoritesContext.jsx';
+import { useShopVisibility } from '@/contexts/ShopVisibilityContext.jsx';
 import { useTranslation } from '@/contexts/TranslationContext.jsx';
 import { Button } from '@/components/ui/button.jsx';
 import { Label } from '@/components/ui/label.jsx';
@@ -51,6 +52,7 @@ const ProductDetailPage = () => {
   const { currentUser } = useAuth();
   const { addToCart } = useCart();
   const { addToFavorites, removeFromFavorites, isFavorite } = useFavorites();
+  const { shopEnabled, loading: shopVisibilityLoading } = useShopVisibility();
   const { t, language } = useTranslation();
 
   const [product, setProduct] = useState(null);
@@ -66,6 +68,12 @@ const ProductDetailPage = () => {
 
   useEffect(() => {
     const fetchProduct = async () => {
+      if (requestedProductSource === 'shop' && !shopEnabled) {
+        setProduct(null);
+        setLoading(false);
+        return;
+      }
+
       setLoading(true);
       setProduct(null);
 
@@ -80,6 +88,10 @@ const ProductDetailPage = () => {
         try {
           record = await pb.collection(preferredCollection).getOne(id, { $autoCancel: false });
         } catch {
+          if (fallbackSource === 'shop' && !shopEnabled) {
+            throw new Error('Shop product fallback is disabled while the shop is hidden');
+          }
+
           record = await pb.collection(fallbackCollection).getOne(id, { $autoCancel: false });
           source = fallbackSource;
         }
@@ -94,8 +106,10 @@ const ProductDetailPage = () => {
       }
     };
 
-    fetchProduct();
-  }, [id, requestedProductSource, t]);
+    if (!shopVisibilityLoading) {
+      fetchProduct();
+    }
+  }, [id, requestedProductSource, shopEnabled, shopVisibilityLoading, t]);
 
   useEffect(() => {
     let isMounted = true;
@@ -144,10 +158,25 @@ const ProductDetailPage = () => {
       currency: 'EUR',
     }).format(Number(price) || 0);
 
-  if (loading) {
+  if (loading || shopVisibilityLoading) {
     return (
       <main className="flex min-h-[70vh] flex-1 items-center justify-center bg-white">
         <div className="text-sm font-medium text-slate-500">{t('common.loading')}</div>
+      </main>
+    );
+  }
+
+  if (requestedProductSource === 'shop' && !shopEnabled) {
+    return (
+      <main className="flex min-h-[70vh] flex-1 items-center justify-center bg-[#f7f7f7] px-4 py-12">
+        <section className="w-full max-w-2xl rounded-[8px] border border-black/10 bg-white p-8 text-center shadow-sm">
+          <AlertCircle className="mx-auto h-10 w-10 text-[#0000FF]" />
+          <h1 className="mt-5 text-2xl font-bold text-[#151515]">{t('shop.unavailable_title')}</h1>
+          <p className="mx-auto mt-3 max-w-lg text-sm leading-6 text-[#666666]">{t('shop.unavailable_body')}</p>
+          <Button type="button" onClick={() => navigate('/marketplace')} className="mt-7 h-11 rounded-[8px] bg-[#0000FF] px-5 text-white hover:bg-[#0000CC]">
+            {t('shop.go_marketplace')}
+          </Button>
+        </section>
       </main>
     );
   }

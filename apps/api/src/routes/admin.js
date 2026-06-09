@@ -1231,7 +1231,10 @@ router.get('/dashboard', async (req, res) => {
     users,
     returns,
     sellerEarnings,
-    settings,
+    settings: {
+      ...(settings || {}),
+      ...normalizePlatformSettings(settings || {}),
+    },
     fetchedAt: new Date().toISOString(),
   });
 });
@@ -2731,10 +2734,19 @@ router.delete('/shop-filter-options/:id', async (req, res) => {
 
 // Get Admin Settings
 router.get('/settings', async (req, res) => {
-  const settings = await pb.collection('admin_settings').getFirstListItem('');
+  const settings = await pb.collection('admin_settings').getFirstListItem('').catch((error) => {
+    if (error?.status === 404) {
+      return null;
+    }
+
+    throw error;
+  });
 
   logger.info(`[ADMIN] Admin settings retrieved by admin ${req.auth.id}`);
-  res.json(settings);
+  res.json({
+    ...(settings || {}),
+    ...normalizePlatformSettings(settings || {}),
+  });
 });
 
 // Update Admin Settings
@@ -2745,6 +2757,7 @@ router.put('/settings', async (req, res) => {
     transaction_fee_percentage,
     transaction_fee_percent,
     verification_fee,
+    shop_enabled,
     dhl_api_key,
     dhl_api_secret,
     stripe_public_key,
@@ -2757,6 +2770,7 @@ router.put('/settings', async (req, res) => {
   if (transaction_fee_percentage !== undefined) updateData.transaction_fee_percentage = parseFloat(transaction_fee_percentage);
   if (transaction_fee_percent !== undefined) updateData.transaction_fee_percentage = parseFloat(transaction_fee_percent);
   if (verification_fee !== undefined) updateData.verification_fee = parseFloat(verification_fee);
+  if (shop_enabled !== undefined) updateData.shop_enabled = shop_enabled === true || shop_enabled === 'true' || shop_enabled === 1 || shop_enabled === '1';
   if (dhl_api_key !== undefined) updateData.dhl_api_key = dhl_api_key;
   if (dhl_api_secret !== undefined) updateData.dhl_api_secret = dhl_api_secret;
   if (stripe_public_key !== undefined) updateData.stripe_public_key = stripe_public_key;
@@ -2777,6 +2791,7 @@ router.put('/settings', async (req, res) => {
       service_fee: defaults.service_fee,
       transaction_fee_percentage: defaults.transaction_fee_percentage,
       verification_fee: defaults.verification_fee,
+      shop_enabled: defaults.shop_enabled,
       dhl_api_key: updateData.dhl_api_key || '',
       dhl_api_secret: updateData.dhl_api_secret || '',
       stripe_public_key: updateData.stripe_public_key || '',
@@ -2785,7 +2800,10 @@ router.put('/settings', async (req, res) => {
   }
 
   logger.info(`[ADMIN] Admin settings updated by admin ${req.auth.id}`);
-  res.json(settings);
+  res.json({
+    ...settings,
+    ...normalizePlatformSettings(settings),
+  });
 });
 
 export default router;

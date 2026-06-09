@@ -398,10 +398,17 @@ const LearningLessonPage = () => {
 
       <main className="learning-shell flex-1">
         <div className="container mx-auto px-4 py-12 sm:px-6 lg:px-8 md:py-16">
-          <Link to={getLearningTopicPath(data.package, data.module)} className="inline-flex items-center gap-2 text-sm font-medium text-slate-500 transition-colors hover:text-[#0000FF]">
-            <ArrowLeft className="size-4" />
-            {data.module?.title || t('learning.dashboard')}
-          </Link>
+          <nav className="flex flex-wrap items-center gap-2 text-sm font-medium text-slate-500" aria-label="Breadcrumb">
+            <Link to="/learning/dashboard" className="transition-colors hover:text-[#0000FF]">
+              {t('learning.dashboard')}
+            </Link>
+            <span aria-hidden="true">/</span>
+            <Link to={getLearningTopicPath(data.package, data.module)} className="break-words transition-colors hover:text-[#0000FF]">
+              {data.module?.title || t('learning.open_module')}
+            </Link>
+            <span aria-hidden="true">/</span>
+            <span className="break-words text-slate-900">{data.lesson.title}</span>
+          </nav>
 
           <section className="mt-6 grid gap-8 lg:grid-cols-[minmax(0,1.08fr)_360px] xl:grid-cols-[minmax(0,1.12fr)_380px]">
             <div className="learning-card p-6 md:p-8">
@@ -440,7 +447,7 @@ const LearningLessonPage = () => {
                     {getMinutesLabel(t, data.lesson.estimatedMinutes)}
                   </Badge>
                 </div>
-                <h1 className="mt-5 text-3xl font-bold text-slate-900 md:text-4xl">{data.lesson.title}</h1>
+                <h1 className="mt-5 break-words text-3xl font-bold text-slate-900 md:text-4xl">{data.lesson.title}</h1>
                 <div className="learning-subtle-card mt-6 p-5">
                   <h2 className="text-xl font-semibold text-slate-900">{t('learning.lesson_description')}</h2>
                   <dl className="mt-4 grid gap-3 text-sm sm:grid-cols-2">
@@ -510,13 +517,13 @@ const LearningLessonPage = () => {
                 </div>
               ) : (
                 <div className="mt-6 space-y-3">
-                  <Button asChild className="h-11 w-full rounded-[8px] bg-[#0000FF] text-white shadow-none hover:bg-[#0000CC]">
+                  <Button asChild className="h-auto min-h-11 w-full rounded-[8px] bg-[#0000FF] px-4 py-3 text-white shadow-none hover:bg-[#0000CC]">
                     <Link to={data.package?.slug ? `/learning/subscribe/${data.package.slug}` : '/learning'}>
                       {t('learning.subscribe')}
                     </Link>
                   </Button>
                   {!isAuthenticated && (
-                    <Button asChild variant="outline" className="h-11 w-full rounded-[8px] border-black/10 bg-white text-slate-700 shadow-none hover:bg-slate-50">
+                    <Button asChild variant="outline" className="h-auto min-h-11 w-full rounded-[8px] border-black/10 bg-white px-4 py-3 text-slate-700 shadow-none hover:bg-slate-50">
                       <Link to="/auth">{t('nav.login')}</Link>
                     </Button>
                   )}
@@ -525,17 +532,17 @@ const LearningLessonPage = () => {
 
               <div className="mt-8 space-y-3">
                 {data.previousLesson && (
-                  <Button asChild variant="outline" className="h-11 w-full rounded-[8px] border-black/10 bg-white text-slate-700 shadow-none hover:bg-slate-50">
+                  <Button asChild variant="outline" className="h-auto min-h-11 w-full rounded-[8px] border-black/10 bg-white px-4 py-3 text-slate-700 shadow-none hover:bg-slate-50">
                     <Link to={getLearningSubtopicPath(data.package, { slug: data.previousLesson.moduleSlug }, data.previousLesson)}>
                       <ArrowLeft className="size-4" />
-                      {t('learning.previous_lesson')}
+                      <span className="whitespace-normal text-center">{t('learning.previous_lesson')}</span>
                     </Link>
                   </Button>
                 )}
                 {data.nextLesson && (
-                  <Button asChild className="h-11 w-full rounded-[8px] bg-[#0000FF] text-white shadow-none hover:bg-[#0000CC]">
+                  <Button asChild className="h-auto min-h-11 w-full rounded-[8px] bg-[#0000FF] px-4 py-3 text-white shadow-none hover:bg-[#0000CC]">
                     <Link to={getLearningSubtopicPath(data.package, { slug: data.nextLesson.moduleSlug }, data.nextLesson)}>
-                      {t('learning.next_lesson')}
+                      <span className="whitespace-normal text-center">{t('learning.next_lesson')}</span>
                       <ArrowRight className="size-4" />
                     </Link>
                   </Button>

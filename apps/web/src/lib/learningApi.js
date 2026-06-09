@@ -398,6 +398,17 @@ export const updateLearningAdminCoupon = async ({ token, id, payload }) => {
   return withJson(response);
 };
 
+export const deleteLearningAdminCoupon = async ({ token, id }) => {
+  const response = await apiServerClient.fetch(`/learning/admin/coupons/${encodeURIComponent(id)}`, {
+    method: 'DELETE',
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+  });
+
+  return withJson(response);
+};
+
 export const grantLearningAdminSubscriberAccess = async ({ token, payload }) => {
   const response = await apiServerClient.fetch('/learning/admin/subscribers/grant', {
     method: 'POST',

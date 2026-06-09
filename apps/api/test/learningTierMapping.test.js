@@ -44,10 +44,10 @@ test('allows higher Z3 tiers to access lower-tier learning content only', () => 
   }), false);
 });
 
-test('keeps Prüfungstrainer visible but disabled for checkout', () => {
+test('keeps all Z3 tiers enabled for checkout', () => {
   assert.equal(isLearningTierCheckoutEnabled('z3-start'), true);
   assert.equal(isLearningTierCheckoutEnabled('z3-struktur'), true);
-  assert.equal(isLearningTierCheckoutEnabled('z3-pruefungstrainer'), false);
+  assert.equal(isLearningTierCheckoutEnabled('z3-pruefungstrainer'), true);
   assert.equal(isLearningTierCheckoutEnabled('zahni-masterclass'), true);
 });
 

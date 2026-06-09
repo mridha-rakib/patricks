@@ -486,10 +486,16 @@ export const localizeLearningLesson = (lesson, language) => {
   if (!lesson) return lesson;
 
   const copy = LESSON_COPY[lesson.slug];
-  if (!copy) return lesson;
+  if (!copy) {
+    return {
+      ...lesson,
+      package: localizeLearningPackage(lesson.package, language),
+    };
+  }
 
   return {
     ...lesson,
+    package: localizeLearningPackage(lesson.package, language),
     title: getLocalizedString(lesson.title, copy.title, language),
     description: getLocalizedString(lesson.description, copy.description, language),
     textContent: getLocalizedString(lesson.textContent, copy.textContent, language),
@@ -512,6 +518,7 @@ export const localizeLearningModule = (moduleRecord, language) => {
 
   return {
     ...localizedModule,
+    package: localizeLearningPackage(localizedModule.package, language),
     lessons: Array.isArray(localizedModule.lessons)
       ? localizedModule.lessons.map((lesson) => localizeLearningLesson(lesson, language))
       : localizedModule.lessons,

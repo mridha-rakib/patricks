@@ -59,7 +59,6 @@ const Z3_PACKAGES = [
     ],
     buttonClassName: 'bg-[#005DFF] text-white hover:bg-[#0047c7]',
     iconClassName: 'text-[#005DFF]',
-    checkoutDisabled: true,
   },
 ];
 
@@ -124,7 +123,7 @@ const LearningPackageSelectorPage = () => {
             {Z3_PACKAGES.map((item) => {
               const packageRecord = packageBySlug.get(item.slug);
               const checkoutSlug = packageRecord?.slug || item.slug;
-              const checkoutDisabled = item.checkoutDisabled || packageRecord?.checkoutEnabled === false;
+              const isCheckoutUnavailable = packageRecord?.checkoutEnabled === false;
 
               return (
                 <article
@@ -148,7 +147,7 @@ const LearningPackageSelectorPage = () => {
 
                   <div className="mt-7 text-center">
                     <div className="flex items-end justify-center gap-2">
-                      <span className="text-4xl font-bold leading-none text-[#005DFF]">{item.price} €</span>
+                      <span className="text-4xl font-bold leading-none text-[#005DFF]">{item.price} EUR</span>
                       <span className="pb-1 text-xs font-medium text-slate-500">{t('learning.z3_per_month')}</span>
                     </div>
                     <p className="mt-3 text-xs leading-5 text-slate-500">{t(item.compareKey)}</p>
@@ -166,7 +165,7 @@ const LearningPackageSelectorPage = () => {
                   </ul>
 
                   <div className="mt-auto pt-8">
-                    {checkoutDisabled ? (
+                    {isCheckoutUnavailable ? (
                       <Button
                         type="button"
                         disabled

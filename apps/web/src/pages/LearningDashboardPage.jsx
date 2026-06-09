@@ -159,6 +159,7 @@ const LearningDashboardPage = () => {
     return diffDays >= 0 && diffDays <= 5;
   }, [dashboard, subscriptionStatus]);
   const learningPlan = dashboard?.learningPlan;
+  const featureAccess = dashboard?.featureAccess || {};
   const planSections = learningPlan?.sections || {};
   const planContinueAssignment = learningPlan?.continueAssignment;
   const planWeeklyPercent = getPlanProgressPercent(learningPlan?.weeklyProgress);
@@ -261,6 +262,89 @@ const LearningDashboardPage = () => {
         })}
       </p>
     </div>
+  );
+
+  const renderContentTree = () => (
+    <section className="learning-card mt-8 p-6 md:p-8">
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+        <div>
+          <p className="text-xs font-semibold uppercase tracking-[0.16em] text-[#0000FF]/70">{t('learning.curriculum_preview')}</p>
+          <h2 className="mt-3 text-3xl font-semibold text-slate-900">{t('learning.curriculum_preview')}</h2>
+          <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-600">{t('learning.content_tree_body')}</p>
+        </div>
+        <Badge className="w-fit rounded-[8px] bg-slate-100 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-600 shadow-none">
+          {dashboard.progress?.percent || 0}%
+        </Badge>
+      </div>
+
+      <div className="mt-6 space-y-4">
+        {(dashboard.modules || []).map((moduleRecord) => {
+          const modulePackage = moduleRecord.package || dashboard.package;
+
+          return (
+          <section key={moduleRecord.id} className="learning-subtle-card p-4 sm:p-5">
+            <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+              <div className="min-w-0">
+                <h3 className="break-words text-xl font-semibold text-slate-900">{moduleRecord.title}</h3>
+                <p className="mt-2 text-sm leading-6 text-slate-600">{moduleRecord.description}</p>
+              </div>
+              <div className="flex shrink-0 flex-wrap gap-2 sm:justify-end">
+                <Badge className="rounded-[8px] bg-white px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-600 shadow-none">
+                  {moduleRecord.lessons.length} {t('learning.lessons_count')}
+                </Badge>
+                <Badge className={`rounded-[8px] px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.14em] shadow-none ${getLearningTopicStatusToneClass(moduleRecord.progress?.topicStatus || moduleRecord.progress?.status)}`}>
+                  {getLearningTopicStatusLabel(t, moduleRecord.progress?.topicStatus || moduleRecord.progress?.status)}
+                </Badge>
+              </div>
+            </div>
+
+            <div className="mt-4 max-w-sm">
+              <div className="flex items-center justify-between gap-3 text-xs text-slate-500">
+                <span>{t('learning.progress')}</span>
+                <span>{moduleRecord.progress?.completedLessons || 0}/{moduleRecord.progress?.totalLessons || moduleRecord.lessons.length}</span>
+              </div>
+              <div className="learning-progress-track mt-2">
+                <div className="learning-progress-fill" style={{ width: `${moduleRecord.progress?.percent || 0}%` }} />
+              </div>
+            </div>
+
+            <div className="mt-5 space-y-3">
+              {moduleRecord.lessons.map((lesson) => (
+                <Link
+                  key={lesson.id}
+                  to={getLearningSubtopicPath(lesson.package || modulePackage, moduleRecord, lesson)}
+                  className="learning-inline-card flex flex-col gap-3 px-4 py-3 transition-colors hover:border-[#0000FF]/25 sm:flex-row sm:items-center sm:justify-between"
+                >
+                  <div className="min-w-0">
+                    <p className="break-words text-sm font-semibold text-slate-900">{lesson.title}</p>
+                    <p className="mt-1 text-xs text-slate-500">{getMinutesLabel(t, lesson.estimatedMinutes)}</p>
+                    <div className="learning-progress-track mt-3 max-w-[160px]">
+                      <div className="learning-progress-fill" style={{ width: `${lesson.progress?.progressPercentage || 0}%` }} />
+                    </div>
+                  </div>
+                  <Badge className={`w-fit rounded-[8px] px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.14em] shadow-none ${
+                    lesson.progress?.status === 'completed'
+                      ? 'bg-emerald-100 text-emerald-700'
+                      : lesson.progress?.status === 'in_progress'
+                        ? 'bg-[#0000FF]/10 text-[#0000FF]'
+                        : 'bg-slate-100 text-slate-500'
+                  }`}>
+                    {getLearningProgressStatusLabel(t, lesson.progress?.status)}
+                  </Badge>
+                </Link>
+              ))}
+            </div>
+
+            <div className="mt-4">
+              <Button asChild variant="outline" className="h-10 w-full rounded-[8px] border-black/10 bg-white px-5 text-slate-700 shadow-none hover:bg-slate-50 sm:w-auto">
+                <Link to={getLearningTopicPath(modulePackage, moduleRecord)}>{t('learning.open_module')}</Link>
+              </Button>
+            </div>
+          </section>
+          );
+        })}
+      </div>
+    </section>
   );
 
   useEffect(() => {
@@ -457,7 +541,7 @@ const LearningDashboardPage = () => {
                     <h2 className="mt-3 text-2xl font-semibold text-slate-900">{continueLesson.title}</h2>
                     <p className="mt-2 text-sm leading-6 text-slate-600">{continueLesson.description}</p>
                     <Button asChild className="mt-5 h-11 rounded-[8px] bg-[#0000FF] px-6 text-white shadow-none hover:bg-[#0000CC]">
-                      <Link to={getLearningSubtopicPath(dashboard.package, { slug: continueLesson.moduleSlug }, continueLesson)}>
+                      <Link to={getLearningSubtopicPath(continueLesson.package || dashboard.package, { slug: continueLesson.moduleSlug }, continueLesson)}>
                         {t('learning.continue_learning')}
                         <ArrowRight className="size-4" />
                       </Link>
@@ -534,6 +618,8 @@ const LearningDashboardPage = () => {
               </div>
             </div>
           </section>
+
+          {renderContentTree()}
 
           {learningPlan?.enabled && (
             <section className="learning-card mt-8 p-6 md:p-8">
@@ -646,6 +732,35 @@ const LearningDashboardPage = () => {
             </section>
           )}
 
+          {featureAccess.examTrainer && (
+            <section className="learning-card mt-8 p-6 md:p-8">
+              <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+                <div>
+                  <p className="text-xs font-semibold uppercase tracking-[0.16em] text-[#0000FF]/70">{t('learning.exam_trainer_eyebrow')}</p>
+                  <h2 className="mt-3 text-3xl font-semibold text-slate-900">{t('learning.exam_trainer_title')}</h2>
+                  <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-600">{t('learning.exam_trainer_body')}</p>
+                </div>
+                <Badge className="w-fit rounded-[8px] bg-[#0000FF]/10 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.14em] text-[#0000FF] shadow-none">
+                  {t('learning.status_unlocked')}
+                </Badge>
+              </div>
+
+              <div className="mt-6 grid gap-3 md:grid-cols-3">
+                {[
+                  { title: t('learning.exam_question_pool'), body: t('learning.exam_question_pool_body'), Icon: Search },
+                  { title: t('learning.exam_training_mode'), body: t('learning.exam_training_mode_body'), Icon: Clock3 },
+                  { title: t('learning.exam_analysis'), body: t('learning.exam_analysis_body'), Icon: CheckCircle2 },
+                ].map(({ title, body, Icon }) => (
+                  <div key={title} className="learning-subtle-card p-5">
+                    <Icon className="size-5 text-[#0000FF]" />
+                    <h3 className="mt-4 text-lg font-semibold text-slate-900">{title}</h3>
+                    <p className="mt-2 text-sm leading-6 text-slate-600">{body}</p>
+                  </div>
+                ))}
+              </div>
+            </section>
+          )}
+
           <section className="learning-card mt-8 p-6 md:p-8">
             <div className="flex flex-wrap items-start justify-between gap-4">
               <div>
@@ -711,98 +826,25 @@ const LearningDashboardPage = () => {
             </div>
           </section>
 
-          <section className="mt-8 grid gap-8 lg:grid-cols-[0.92fr_1.08fr]">
-            <div className="learning-card p-6 md:p-8">
-              <p className="text-xs font-semibold uppercase tracking-[0.16em] text-[#0000FF]/70">{t('learning.recently_opened')}</p>
-              <h2 className="mt-3 text-3xl font-semibold text-slate-900">{t('learning.most_recent_lesson')}</h2>
+          <section className="learning-card mt-8 p-6 md:p-8">
+            <p className="text-xs font-semibold uppercase tracking-[0.16em] text-[#0000FF]/70">{t('learning.recently_opened')}</p>
+            <h2 className="mt-3 text-3xl font-semibold text-slate-900">{t('learning.most_recent_lesson')}</h2>
 
-              <div className="mt-6 space-y-3">
-                {dashboard.recentlyOpened?.length > 0 ? dashboard.recentlyOpened.map((lesson) => (
-                  <Link key={lesson.id} to={getLearningSubtopicPath(dashboard.package, { slug: lesson.moduleSlug }, lesson)} className="learning-subtle-card block p-4 transition-colors hover:border-[#0000FF]/25 hover:bg-white">
-                    <p className="text-sm font-semibold uppercase tracking-[0.14em] text-[#0000FF]/70">
-                      {getLearningProgressStatusLabel(t, lesson.progress?.status || 'in_progress')}
-                    </p>
-                    <h3 className="mt-2 text-xl font-semibold text-slate-900">{lesson.title}</h3>
-                    <p className="mt-2 text-sm leading-6 text-slate-600">{lesson.description}</p>
-                    <p className="mt-3 text-xs text-slate-500">{formatDate(lesson.progress?.lastOpenedAt, locale)}</p>
-                  </Link>
-                )) : (
-                  <div className="rounded-[8px] border border-dashed border-black/10 bg-[#f7f7f7] p-5 text-sm text-slate-500">
-                    {t('learning.no_recent')}
-                  </div>
-                )}
-              </div>
-            </div>
-
-            <div className="learning-card p-6 md:p-8">
-              <div className="flex items-center justify-between gap-4">
-                <div>
-                  <p className="text-xs font-semibold uppercase tracking-[0.16em] text-[#0000FF]/70">{t('learning.curriculum_preview')}</p>
-                  <h2 className="mt-3 text-3xl font-semibold text-slate-900">{t('learning.curriculum_preview')}</h2>
+            <div className="mt-6 grid gap-3 md:grid-cols-3">
+              {dashboard.recentlyOpened?.length > 0 ? dashboard.recentlyOpened.map((lesson) => (
+                <Link key={lesson.id} to={getLearningSubtopicPath(lesson.package || dashboard.package, { slug: lesson.moduleSlug }, lesson)} className="learning-subtle-card block p-4 transition-colors hover:border-[#0000FF]/25 hover:bg-white">
+                  <p className="text-sm font-semibold uppercase tracking-[0.14em] text-[#0000FF]/70">
+                    {getLearningProgressStatusLabel(t, lesson.progress?.status || 'in_progress')}
+                  </p>
+                  <h3 className="mt-2 break-words text-xl font-semibold text-slate-900">{lesson.title}</h3>
+                  <p className="mt-2 text-sm leading-6 text-slate-600">{lesson.description}</p>
+                  <p className="mt-3 text-xs text-slate-500">{formatDate(lesson.progress?.lastOpenedAt, locale)}</p>
+                </Link>
+              )) : (
+                <div className="rounded-[8px] border border-dashed border-black/10 bg-[#f7f7f7] p-5 text-sm text-slate-500 md:col-span-3">
+                  {t('learning.no_recent')}
                 </div>
-                <Badge className="rounded-[8px] bg-slate-100 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-600 shadow-none">
-                  {dashboard.progress?.percent || 0}%
-                </Badge>
-              </div>
-
-              <div className="mt-6 space-y-4">
-                {(dashboard.modules || []).map((moduleRecord) => (
-                  <section key={moduleRecord.id} className="learning-subtle-card p-5">
-                    <div className="flex items-start justify-between gap-4">
-                      <div>
-                        <h3 className="text-xl font-semibold text-slate-900">{moduleRecord.title}</h3>
-                        <p className="mt-2 text-sm leading-6 text-slate-600">{moduleRecord.description}</p>
-                      </div>
-                      <div className="flex shrink-0 flex-wrap justify-end gap-2">
-                        <Badge className="rounded-[8px] bg-white px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-600 shadow-none">
-                          {moduleRecord.lessons.length} {t('learning.lessons_count')}
-                        </Badge>
-                        <Badge className={`rounded-[8px] px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.14em] shadow-none ${getLearningTopicStatusToneClass(moduleRecord.progress?.topicStatus || moduleRecord.progress?.status)}`}>
-                          {getLearningTopicStatusLabel(t, moduleRecord.progress?.topicStatus || moduleRecord.progress?.status)}
-                        </Badge>
-                      </div>
-                    </div>
-                    <div className="mt-4 max-w-sm">
-                      <div className="flex items-center justify-between gap-3 text-xs text-slate-500">
-                        <span>{t('learning.progress')}</span>
-                        <span>{moduleRecord.progress?.completedLessons || 0}/{moduleRecord.progress?.totalLessons || moduleRecord.lessons.length}</span>
-                      </div>
-                      <div className="learning-progress-track mt-2">
-                        <div className="learning-progress-fill" style={{ width: `${moduleRecord.progress?.percent || 0}%` }} />
-                      </div>
-                    </div>
-
-                    <div className="mt-5 space-y-3">
-                      {moduleRecord.lessons.map((lesson) => (
-                        <Link key={lesson.id} to={getLearningSubtopicPath(dashboard.package, moduleRecord, lesson)} className="learning-inline-card flex items-center justify-between gap-4 px-4 py-3 transition-colors hover:border-[#0000FF]/25">
-                          <div className="min-w-0">
-                            <p className="truncate text-sm font-semibold text-slate-900">{lesson.title}</p>
-                            <p className="mt-1 text-xs text-slate-500">{getMinutesLabel(t, lesson.estimatedMinutes)}</p>
-                            <div className="learning-progress-track mt-3 max-w-[160px]">
-                              <div className="learning-progress-fill" style={{ width: `${lesson.progress?.progressPercentage || 0}%` }} />
-                            </div>
-                          </div>
-                          <Badge className={`rounded-[8px] px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.14em] shadow-none ${
-                            lesson.progress?.status === 'completed'
-                              ? 'bg-emerald-100 text-emerald-700'
-                              : lesson.progress?.status === 'in_progress'
-                                ? 'bg-[#0000FF]/10 text-[#0000FF]'
-                                : 'bg-slate-100 text-slate-500'
-                          }`}>
-                            {getLearningProgressStatusLabel(t, lesson.progress?.status)}
-                          </Badge>
-                        </Link>
-                      ))}
-                    </div>
-
-                    <div className="mt-4">
-                      <Button asChild variant="outline" className="h-10 rounded-[8px] border-black/10 bg-white px-5 text-slate-700 shadow-none hover:bg-slate-50">
-                        <Link to={getLearningTopicPath(dashboard.package, moduleRecord)}>{t('learning.open_module')}</Link>
-                      </Button>
-                    </div>
-                  </section>
-                ))}
-              </div>
+              )}
             </div>
           </section>
         </div>

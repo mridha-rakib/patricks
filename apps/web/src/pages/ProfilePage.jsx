@@ -30,6 +30,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar.jsx'
 import ShippingInfoSection from '@/components/ShippingInfoSection.jsx';
 import AccountLayout from '@/components/AccountLayout.jsx';
 import { useAuth } from '@/contexts/AuthContext.jsx';
+import { useShopVisibility } from '@/contexts/ShopVisibilityContext.jsx';
 import { useTranslation } from '@/contexts/TranslationContext.jsx';
 import pb from '@/lib/pocketbaseClient.js';
 
@@ -71,6 +72,7 @@ const profileStatToneClasses = [
 
 const ProfilePage = () => {
   const { currentUser, isSeller, isAdmin, refreshUser } = useAuth();
+  const { shopEnabled } = useShopVisibility();
   const { t, language } = useTranslation();
   const navigate = useNavigate();
   const [orders, setOrders] = useState([]);
@@ -1028,8 +1030,8 @@ const ProfilePage = () => {
                       <p className="mt-3 max-w-md text-sm leading-6 text-[#686868]">
                         {t('profile.no_orders_body')}
                       </p>
-                      <Link to="/shop" className={`mt-6 ${primaryActionClass}`}>
-                        {t('orders.shop_now')}
+                      <Link to={shopEnabled ? '/shop' : '/marketplace'} className={`mt-6 ${primaryActionClass}`}>
+                        {shopEnabled ? t('orders.shop_now') : t('cart.go_marketplace')}
                         <ArrowRight className="h-4 w-4" />
                       </Link>
                     </div>

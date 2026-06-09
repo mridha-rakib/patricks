@@ -3,6 +3,7 @@ import pb from '../utils/pocketbaseClient.js';
 import logger from '../utils/logger.js';
 import { buildDynamicProductFilters, getShopFilterDefinitions } from '../utils/shopFilters.js';
 import { getPublicPocketBaseFileUrl } from '../utils/fileUrls.js';
+import { getPlatformSettings } from '../utils/platformSettings.js';
 
 const router = express.Router();
 
@@ -46,6 +47,11 @@ const normalizeShopProduct = (product) => ({
 
 router.get('/filters', async (_req, res, next) => {
   try {
+    const settings = await getPlatformSettings();
+    if (!settings.shop_enabled) {
+      return res.status(403).json({ error: 'Official shop is currently unavailable.' });
+    }
+
     const filters = await getShopFilterDefinitions('shop');
     res.json({ items: filters });
   } catch (error) {
@@ -56,6 +62,11 @@ router.get('/filters', async (_req, res, next) => {
 
 router.get('/products', async (req, res, next) => {
   try {
+    const settings = await getPlatformSettings();
+    if (!settings.shop_enabled) {
+      return res.status(403).json({ error: 'Official shop is currently unavailable.' });
+    }
+
     const page = Math.max(parseInt(req.query.page, 10) || 1, 1);
     const perPage = Math.min(Math.max(parseInt(req.query.perPage, 10) || 50, 1), 100);
     const sort = SORT_OPTIONS.has(req.query.sort) ? req.query.sort : '-created';

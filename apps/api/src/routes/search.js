@@ -2,6 +2,7 @@ import express from 'express';
 import pb from '../utils/pocketbaseClient.js';
 import { getPublicPocketBaseFileUrl } from '../utils/fileUrls.js';
 import logger from '../utils/logger.js';
+import { getPlatformSettings } from '../utils/platformSettings.js';
 
 const router = express.Router();
 
@@ -68,6 +69,7 @@ router.get('/', async (req, res) => {
   }
 
   const search = escapeFilterValue(query);
+  const settings = await getPlatformSettings();
   const marketplaceFilter = await getMarketplaceSearchFilter(search);
   const shopFilter = `(name~"${search}" || description~"${search}")`;
 
@@ -79,13 +81,15 @@ router.get('/', async (req, res) => {
       logger.warn(`[SEARCH] Marketplace search failed: ${error.message}`);
       return { items: [] };
     }),
-    pb.collection('shop_products').getList(1, limit, {
-      filter: shopFilter,
-      sort: '-created',
-    }).catch((error) => {
-      logger.warn(`[SEARCH] Shop search failed: ${error.message}`);
-      return { items: [] };
-    }),
+    settings.shop_enabled
+      ? pb.collection('shop_products').getList(1, limit, {
+          filter: shopFilter,
+          sort: '-created',
+        }).catch((error) => {
+          logger.warn(`[SEARCH] Shop search failed: ${error.message}`);
+          return { items: [] };
+        })
+      : Promise.resolve({ items: [] }),
   ]);
 
   const items = [

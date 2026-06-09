@@ -21,6 +21,7 @@ import { Button } from '@/components/ui/button.jsx';
 import { Skeleton } from '@/components/ui/skeleton.jsx';
 import AccountLayout from '@/components/AccountLayout.jsx';
 import { useAuth } from '@/contexts/AuthContext.jsx';
+import { useShopVisibility } from '@/contexts/ShopVisibilityContext.jsx';
 import { useTranslation } from '@/contexts/TranslationContext.jsx';
 import apiServerClient from '@/lib/apiServerClient.js';
 import { getAuthToken } from '@/lib/getAuthToken.js';
@@ -64,6 +65,7 @@ const getImageUrl = (product) => {
 
 const MyOrdersPage = () => {
   const { currentUser } = useAuth();
+  const { shopEnabled } = useShopVisibility();
   const { t, language } = useTranslation();
   const navigate = useNavigate();
   const [orders, setOrders] = useState([]);
@@ -371,12 +373,14 @@ const MyOrdersPage = () => {
                 {t('profile.no_orders_body')}
               </p>
               <div className="mt-7 flex flex-col gap-3 sm:flex-row">
-                <Link to="/shop" className="inline-flex min-h-11 items-center justify-center rounded-[8px] bg-[#0000FF] px-5 text-sm font-semibold text-white transition-colors hover:bg-[#0000CC]">
-                  {t('popular.go_shop')}
+                <Link to={shopEnabled ? '/shop' : '/marketplace'} className="inline-flex min-h-11 items-center justify-center rounded-[8px] bg-[#0000FF] px-5 text-sm font-semibold text-white transition-colors hover:bg-[#0000CC]">
+                  {shopEnabled ? t('popular.go_shop') : t('cart.go_marketplace')}
                 </Link>
-                <Link to="/marketplace" className="inline-flex min-h-11 items-center justify-center rounded-[8px] border border-black/15 bg-white px-5 text-sm font-semibold text-[#151515] transition-colors hover:border-[#0000FF]/35 hover:bg-[#f3f3ff]">
-                  {t('cart.go_marketplace')}
-                </Link>
+                {shopEnabled && (
+                  <Link to="/marketplace" className="inline-flex min-h-11 items-center justify-center rounded-[8px] border border-black/15 bg-white px-5 text-sm font-semibold text-[#151515] transition-colors hover:border-[#0000FF]/35 hover:bg-[#f3f3ff]">
+                    {t('cart.go_marketplace')}
+                  </Link>
+                )}
               </div>
             </section>
           ) : (

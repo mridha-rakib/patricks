@@ -11,7 +11,6 @@ export const Z3_LEARNING_TIER_ORDER = Object.freeze([
 ]);
 
 export const DISABLED_Z3_CHECKOUT_TIERS = Object.freeze([
-  Z3_LEARNING_TIERS.PRUEFUNGSTRAINER,
 ]);
 
 const Z3_TIER_ALIASES = new Map([

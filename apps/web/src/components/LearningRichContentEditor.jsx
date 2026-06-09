@@ -543,9 +543,9 @@ const LearningRichContentEditor = ({
     updateParagraphBlock(applyInlineStyle(activeBlock, range, patch));
   };
 
-  const insertBlock = (block) => {
+  const insertBlock = (block, { append = false } = {}) => {
     const selectedIndex = blocks.findIndex((item) => item.id === selectedBlockId);
-    const insertIndex = selectedIndex >= 0 ? selectedIndex + 1 : blocks.length;
+    const insertIndex = append || selectedIndex < 0 ? blocks.length : selectedIndex + 1;
     commit([
       ...blocks.slice(0, insertIndex),
       block,
@@ -654,10 +654,10 @@ const LearningRichContentEditor = ({
             </button>
           ))}
         </div>
-        <ToolbarButton label="Add text" onClick={() => insertBlock(createParagraphBlock())}>
+        <ToolbarButton label="Add text" onClick={() => insertBlock(createParagraphBlock(), { append: true })}>
           <Type className="size-4" />
         </ToolbarButton>
-        <ToolbarButton label="Add heading" onClick={() => insertBlock(createParagraphBlock({ size: 'heading' }))}>
+        <ToolbarButton label="Add heading" onClick={() => insertBlock(createParagraphBlock({ size: 'heading' }), { append: true })}>
           <Heading2 className="size-4" />
         </ToolbarButton>
         <ToolbarButton label="Add bullet list" onClick={() => insertBlock(createListBlock())}>

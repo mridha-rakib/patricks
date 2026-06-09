@@ -4,6 +4,7 @@ import { Toaster } from '@/components/ui/sonner.jsx';
 import { AuthProvider } from '@/contexts/AuthContext.jsx';
 import { CartProvider } from '@/contexts/CartContext.jsx';
 import { FavoritesProvider } from '@/contexts/FavoritesContext.jsx';
+import { ShopVisibilityProvider } from '@/contexts/ShopVisibilityContext.jsx';
 import { TranslationProvider } from '@/contexts/TranslationContext.jsx';
 import ScrollToTop from './components/ScrollToTop.jsx';
 import ProtectedRoute from './components/ProtectedRoute.jsx';
@@ -64,8 +65,9 @@ function App() {
     <Router>
       <TranslationProvider>
         <AuthProvider>
-          <CartProvider>
-            <FavoritesProvider>
+          <ShopVisibilityProvider>
+            <CartProvider>
+              <FavoritesProvider>
               <ScrollToTop />
               <div className="flex flex-col min-h-screen">
                 <Header />
@@ -227,8 +229,9 @@ function App() {
                 <Footer />
               </div>
               <Toaster />
-            </FavoritesProvider>
-          </CartProvider>
+              </FavoritesProvider>
+            </CartProvider>
+          </ShopVisibilityProvider>
         </AuthProvider>
       </TranslationProvider>
     </Router>

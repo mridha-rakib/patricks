@@ -56,7 +56,10 @@ export const CartProvider = ({ children }) => {
     const savedCart = localStorage.getItem('shopping_cart');
     if (savedCart) {
       try {
-        setCartItems(JSON.parse(savedCart));
+        const parsedCart = JSON.parse(savedCart);
+        setCartItems(Array.isArray(parsedCart)
+          ? parsedCart.map(item => item.product_type === 'shop' ? item : { ...item, quantity: 1 })
+          : []);
       } catch (e) {
         console.error('Failed to parse cart from localStorage', e);
       }
@@ -89,7 +92,9 @@ export const CartProvider = ({ children }) => {
         })
       );
 
-      const validItems = itemsWithProducts.filter(item => item !== null);
+      const validItems = itemsWithProducts
+        .filter(item => item !== null)
+        .map(item => item.product_type === 'shop' ? item : { ...item, quantity: 1 });
       setCartItems(validItems);
     } catch (error) {
       console.error('Failed to load cart from DB:', error);
@@ -111,19 +116,23 @@ export const CartProvider = ({ children }) => {
   }, [cartItems]);
 
   const addToCart = async (product, quantity = 1, productType = 'marketplace') => {
+    const normalizedProductType = productType === 'shop' ? 'shop' : 'marketplace';
+    const normalizedQuantity = normalizedProductType === 'shop' ? quantity : 1;
     const existingIndex = cartItems.findIndex(
-      item => item.product_id === product.id && item.product_type === productType
+      item => item.product_id === product.id && item.product_type === normalizedProductType
     );
 
     let newCart = [...cartItems];
     if (existingIndex >= 0) {
-      newCart[existingIndex].quantity += quantity;
+      newCart[existingIndex].quantity = normalizedProductType === 'shop'
+        ? newCart[existingIndex].quantity + normalizedQuantity
+        : 1;
     } else {
       newCart.push({
         id: `local_${Date.now()}`,
         product_id: product.id,
-        product_type: productType,
-        quantity,
+        product_type: normalizedProductType,
+        quantity: normalizedQuantity,
         product
       });
     }
@@ -132,20 +141,22 @@ export const CartProvider = ({ children }) => {
     if (currentUser) {
       try {
         const existingDbItem = await pb.collection('cart_items').getFirstListItem(
-          `user_id="${currentUser.id}" && product_id="${product.id}" && product_type="${productType}"`,
+          `user_id="${currentUser.id}" && product_id="${product.id}" && product_type="${normalizedProductType}"`,
           { $autoCancel: false }
         ).catch(() => null);
 
         if (existingDbItem) {
           await pb.collection('cart_items').update(existingDbItem.id, {
-            quantity: existingDbItem.quantity + quantity
+            quantity: normalizedProductType === 'shop'
+              ? existingDbItem.quantity + normalizedQuantity
+              : 1
           }, { $autoCancel: false });
         } else {
           await pb.collection('cart_items').create({
             user_id: currentUser.id,
             product_id: product.id,
-            product_type: productType,
-            quantity
+            product_type: normalizedProductType,
+            quantity: normalizedQuantity
           }, { $autoCancel: false });
         }
         await loadCart();
@@ -168,6 +179,9 @@ export const CartProvider = ({ children }) => {
   };
 
   const updateQuantity = async (cartItemId, productId, quantity) => {
+    const currentItem = cartItems.find(item => item.id === cartItemId || item.product_id === productId);
+    const nextQuantity = currentItem?.product_type === 'shop' ? quantity : 1;
+
     if (quantity < 1) {
       await removeFromCart(cartItemId, productId);
       return;
@@ -175,13 +189,13 @@ export const CartProvider = ({ children }) => {
 
     setCartItems(prev => prev.map(item =>
       (item.id === cartItemId || item.product_id === productId)
-        ? { ...item, quantity }
+        ? { ...item, quantity: item.product_type === 'shop' ? nextQuantity : 1 }
         : item
     ));
 
     if (currentUser && !cartItemId.toString().startsWith('local_')) {
       try {
-        await pb.collection('cart_items').update(cartItemId, { quantity }, { $autoCancel: false });
+        await pb.collection('cart_items').update(cartItemId, { quantity: nextQuantity }, { $autoCancel: false });
       } catch (error) {
         console.error('Failed to update quantity in DB:', error);
       }

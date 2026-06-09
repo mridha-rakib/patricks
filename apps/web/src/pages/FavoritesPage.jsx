@@ -9,12 +9,20 @@ import { toast } from 'sonner';
 import { getProductImageUrl } from '@/lib/productImages.js';
 import { useAuth } from '@/contexts/AuthContext.jsx';
 import { useFavorites } from '@/contexts/FavoritesContext.jsx';
+import { useShopVisibility } from '@/contexts/ShopVisibilityContext.jsx';
 import { useTranslation } from '@/contexts/TranslationContext.jsx';
 
 const FavoritesPage = () => {
   const { isAuthenticated } = useAuth();
   const { favorites, loading, loadFavorites, removeFromFavorites } = useFavorites();
+  const { shopEnabled } = useShopVisibility();
   const { t } = useTranslation();
+  const visibleFavorites = shopEnabled
+    ? favorites
+    : favorites.filter((fav) => {
+        const product = fav.product;
+        return product?.source !== 'shop' && product?.collectionName !== 'shop_products';
+      });
 
   useEffect(() => {
     if (isAuthenticated) {
@@ -83,9 +91,9 @@ const FavoritesPage = () => {
                 </Card>
               ))}
             </div>
-          ) : favorites.length > 0 ? (
+          ) : visibleFavorites.length > 0 ? (
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 md:gap-6">
-              {favorites.map((fav) => {
+              {visibleFavorites.map((fav) => {
                 const product = fav.product;
                 if (!product) return null;
                 const isShopProduct = product.source === 'shop' || product.collectionName === 'shop_products';
@@ -146,9 +154,11 @@ const FavoritesPage = () => {
                   {t('favorites.empty_body')}
                 </p>
                 <div className="flex flex-col sm:flex-row gap-3 w-full sm:w-auto">
-                  <Link to="/shop" className="w-full sm:w-auto">
-                    <Button className="bg-[#0000FF] hover:bg-[#0000CC] text-white w-full min-h-[44px]">{t('popular.go_shop')}</Button>
-                  </Link>
+                  {shopEnabled && (
+                    <Link to="/shop" className="w-full sm:w-auto">
+                      <Button className="bg-[#0000FF] hover:bg-[#0000CC] text-white w-full min-h-[44px]">{t('popular.go_shop')}</Button>
+                    </Link>
+                  )}
                   <Link to="/marketplace" className="w-full sm:w-auto">
                     <Button variant="outline" className="w-full min-h-[44px]">{t('cart.go_marketplace')}</Button>
                   </Link>

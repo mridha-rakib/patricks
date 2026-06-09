@@ -5,6 +5,7 @@ import {
   Activity,
   BarChart3,
   BookOpen,
+  CalendarDays,
   Copy as CopyIcon,
   Eye,
   FileText,
@@ -33,9 +34,11 @@ import {
 } from '@/components/ui/alert-dialog.jsx';
 import { Badge } from '@/components/ui/badge.jsx';
 import { Button } from '@/components/ui/button.jsx';
+import { Calendar } from '@/components/ui/calendar.jsx';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card.jsx';
 import { Input } from '@/components/ui/input.jsx';
 import LearningRichContentEditor from '@/components/LearningRichContentEditor.jsx';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover.jsx';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table.jsx';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs.jsx';
 import { Textarea } from '@/components/ui/textarea.jsx';
@@ -47,6 +50,7 @@ import {
   deleteLearningAdminLesson,
   deleteLearningAdminModule,
   deleteLearningAdminPackage,
+  deleteLearningAdminCoupon,
   duplicateLearningAdminLesson,
   getLearningAdminContent,
   grantLearningAdminSubscriberAccess,
@@ -165,6 +169,81 @@ const emptyCouponForm = {
   stripePromotionCodeId: '',
   promotionText: '',
 };
+
+const padDatePart = (value) => String(value).padStart(2, '0');
+
+const getCouponDateFromValue = (value) => {
+  const rawValue = String(value || '').trim();
+  if (!rawValue) return undefined;
+
+  const dateMatch = rawValue.match(/^(\d{4})-(\d{2})-(\d{2})/);
+  if (dateMatch) {
+    const [, year, month, day] = dateMatch;
+    return new Date(Number(year), Number(month) - 1, Number(day));
+  }
+
+  const parsedDate = new Date(rawValue);
+  return Number.isNaN(parsedDate.getTime()) ? undefined : parsedDate;
+};
+
+const formatCouponDateForApi = (date) => {
+  if (!date || Number.isNaN(date.getTime())) return '';
+
+  const year = date.getFullYear();
+  const month = padDatePart(date.getMonth() + 1);
+  const day = padDatePart(date.getDate());
+  return `${year}-${month}-${day}`;
+};
+
+const formatCouponDateForDisplay = (value) => {
+  const date = getCouponDateFromValue(value);
+  if (!date) return '';
+
+  return `${date.getFullYear()}-${padDatePart(date.getMonth() + 1)}-${padDatePart(date.getDate())}`;
+};
+
+const normalizeCouponDateForApi = (value) => {
+  const rawValue = String(value || '').trim();
+  if (!rawValue) return '';
+
+  const date = getCouponDateFromValue(rawValue);
+  return date ? formatCouponDateForApi(date) : rawValue;
+};
+
+function CouponDatePicker({ value, onChange, placeholder }) {
+  const [open, setOpen] = useState(false);
+  const selectedDate = getCouponDateFromValue(value);
+
+  return (
+    <Popover open={open} onOpenChange={setOpen}>
+      <div className="flex h-10 w-full overflow-hidden rounded-md border border-input bg-background shadow-sm focus-within:ring-1 focus-within:ring-ring">
+        <Input
+          value={formatCouponDateForDisplay(value)}
+          readOnly
+          placeholder={placeholder}
+          className="h-full flex-1 rounded-none border-0 bg-transparent shadow-none focus-visible:ring-0"
+        />
+        <PopoverTrigger asChild>
+          <Button type="button" variant="ghost" size="icon" className="h-full rounded-none border-l border-input" aria-label={placeholder}>
+            <CalendarDays className="size-4" />
+          </Button>
+        </PopoverTrigger>
+      </div>
+      <PopoverContent className="w-auto p-0" align="end">
+        <Calendar
+          mode="single"
+          selected={selectedDate}
+          onSelect={(date) => {
+            if (!date) return;
+            onChange(formatCouponDateForApi(date));
+            setOpen(false);
+          }}
+          captionLayout="dropdown"
+        />
+      </PopoverContent>
+    </Popover>
+  );
+}
 
 const subscriptionStatuses = ['active', 'past_due', 'canceled', 'expired', 'unpaid', 'paused'];
 
@@ -566,7 +645,10 @@ const LearningAdminPage = () => {
   const selectedLessons = selectedPackageSummary?.lessons || [];
   const selectedSubscribers = selectedPackageSummary?.subscribers || [];
   const selectedInvoices = selectedPackageSummary?.invoices || [];
-  const selectedCoupons = selectedPackageSummary?.coupons || [];
+  const allCoupons = useMemo(
+    () => [...content.coupons].sort((left, right) => String(left.code || '').localeCompare(String(right.code || ''))),
+    [content.coupons],
+  );
   const selectedEvents = selectedPackageSummary?.events || [];
   const selectedLessonModule = modulesForSelectedPackage.find((item) => item.id === lessonForm.moduleId) || null;
 
@@ -603,6 +685,17 @@ const LearningAdminPage = () => {
     ].filter((value, index, values) => value && values.indexOf(value) === index);
   };
   const statusLabel = (status) => getSubscriptionStatusLabel(t, status);
+  const getCouponScopeLabel = (coupon) => {
+    if (coupon.packageId) {
+      return content.packages.find((item) => item.id === coupon.packageId)?.title || coupon.packageId;
+    }
+
+    if (coupon.bundleKey) {
+      return `${copy('learning.admin_bundle', 'Bundle')}: ${coupon.bundleKey}`;
+    }
+
+    return copy('learning.admin_all_packages', 'All packages');
+  };
 
   const selectPackage = (packageId) => {
     const normalizedPackageId = packageId || '';
@@ -1151,6 +1244,9 @@ const LearningAdminPage = () => {
             position: getNextLessonPosition(deleteTarget.item.moduleId || ''),
           });
         }
+      } else if (deleteTarget.type === 'coupon') {
+        await deleteLearningAdminCoupon({ token, id: deleteTarget.item.id });
+        if (couponForm.id === deleteTarget.item.id) setCouponForm(emptyCouponForm);
       }
 
       toast.success(t('learning.admin_delete_success'));
@@ -1173,8 +1269,11 @@ const LearningAdminPage = () => {
         percentOff: Number(couponForm.percentOff || 0),
         amountOff: Number(couponForm.amountOff || 0),
         durationInMonths: Number(couponForm.durationInMonths || 0),
+        startsAt: normalizeCouponDateForApi(couponForm.startsAt),
+        expiresAt: normalizeCouponDateForApi(couponForm.expiresAt),
         maxRedemptions: Number(couponForm.maxRedemptions || 0),
       };
+      console.log('[Learning admin coupon] request body', payload);
 
       if (couponForm.id) {
         await updateLearningAdminCoupon({ token, id: couponForm.id, payload });
@@ -1187,6 +1286,19 @@ const LearningAdminPage = () => {
       await loadContent();
     } catch (error) {
       console.error('Failed to save learning coupon:', error);
+      toast.error(error.message || t('learning.admin_save_error'));
+    }
+  };
+
+  const updateCouponStatus = async (coupon, status) => {
+    try {
+      const payload = { status };
+      console.log('[Learning admin coupon status] request body', payload);
+      await updateLearningAdminCoupon({ token, id: coupon.id, payload });
+      toast.success(t('learning.admin_save_success'));
+      await loadContent();
+    } catch (error) {
+      console.error('Failed to update learning coupon status:', error);
       toast.error(error.message || t('learning.admin_save_error'));
     }
   };
@@ -1350,22 +1462,28 @@ const LearningAdminPage = () => {
     ? copy('learning.admin_package', 'Package')
     : deleteTarget?.type === 'module'
       ? copy('learning.admin_module', 'Module')
-      : copy('learning.admin_lesson', 'Lesson');
-  const deleteTargetName = deleteTarget?.item?.title || deleteTypeLabel;
+      : deleteTarget?.type === 'coupon'
+        ? copy('learning.admin_coupon', 'Coupon')
+        : copy('learning.admin_lesson', 'Lesson');
+  const deleteTargetName = deleteTarget?.item?.code || deleteTarget?.item?.title || deleteTypeLabel;
   const deleteConfirmTitle = deleteTarget?.type === 'package'
     ? copy('learning.admin_delete_package_confirm_title', 'Delete this package?')
     : deleteTarget?.type === 'module'
       ? copy('learning.admin_delete_module_confirm_title', 'Delete this module?')
       : deleteTarget?.type === 'lesson'
         ? copy('learning.admin_delete_lesson_confirm_title', 'Delete this lesson?')
-        : copy('learning.admin_delete_confirm_title', 'Delete this item?');
+        : deleteTarget?.type === 'coupon'
+          ? copy('learning.admin_delete_coupon_confirm_title', 'Delete this coupon?')
+          : copy('learning.admin_delete_confirm_title', 'Delete this item?');
   const deleteConfirmBody = deleteTarget?.type === 'package'
     ? copy('learning.admin_delete_package_confirm_body', 'Are you sure you want to delete this package?')
     : deleteTarget?.type === 'module'
       ? copy('learning.admin_delete_module_confirm_body', 'Are you sure you want to delete this module?')
       : deleteTarget?.type === 'lesson'
         ? copy('learning.admin_delete_lesson_confirm_body', 'Are you sure you want to delete this lesson?')
-        : copy('learning.admin_delete_confirm_body', 'Are you sure you want to delete this item?');
+        : deleteTarget?.type === 'coupon'
+          ? copy('learning.admin_delete_coupon_confirm_body', 'Are you sure you want to delete this coupon?')
+          : copy('learning.admin_delete_confirm_body', 'Are you sure you want to delete this item?');
 
   return (
     <>
@@ -2440,8 +2558,8 @@ const LearningAdminPage = () => {
                         <Input value={couponForm.durationInMonths} onChange={(event) => setCouponForm((current) => ({ ...current, durationInMonths: event.target.value }))} placeholder={t('learning.admin_duration_months')} />
                       </div>
                       <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
-                        <Input value={couponForm.startsAt} onChange={(event) => setCouponForm((current) => ({ ...current, startsAt: event.target.value }))} placeholder={t('learning.admin_starts_at')} />
-                        <Input value={couponForm.expiresAt} onChange={(event) => setCouponForm((current) => ({ ...current, expiresAt: event.target.value }))} placeholder={t('learning.admin_expires_at')} />
+                        <CouponDatePicker value={couponForm.startsAt} onChange={(startsAt) => setCouponForm((current) => ({ ...current, startsAt }))} placeholder={t('learning.admin_starts_at')} />
+                        <CouponDatePicker value={couponForm.expiresAt} onChange={(expiresAt) => setCouponForm((current) => ({ ...current, expiresAt }))} placeholder={t('learning.admin_expires_at')} />
                         <Input value={couponForm.maxRedemptions} onChange={(event) => setCouponForm((current) => ({ ...current, maxRedemptions: event.target.value }))} placeholder={t('learning.admin_max_redemptions')} />
                       </div>
                       <FormActions primaryLabel={t('learning.admin_save')} resetLabel={t('learning.admin_reset')} onReset={() => setCouponForm(emptyCouponForm)} />
@@ -2453,10 +2571,10 @@ const LearningAdminPage = () => {
                   <Card className="border-black/6 bg-white shadow-card">
                     <CardHeader>
                       <CardTitle className="flex items-center gap-2"><Ticket className="size-5 text-[#0000FF]" />{t('learning.admin_promotional_actions')}</CardTitle>
-                      <CardDescription>{selectedPackageSummary?.package.title || t('learning.admin_all_packages')}</CardDescription>
+                      <CardDescription>{copy('learning.admin_all_coupons', 'All coupons')}</CardDescription>
                     </CardHeader>
                     <CardContent className="grid gap-3 lg:grid-cols-2">
-                      {selectedCoupons.map((item) => (
+                      {allCoupons.map((item) => (
                         <article key={item.id} className="rounded-[8px] border border-black/6 bg-[#f7f7f7] p-4">
                           <div className="flex items-center justify-between gap-3">
                             <div>
@@ -2466,13 +2584,40 @@ const LearningAdminPage = () => {
                             <Badge className={`rounded-[8px] border px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.14em] shadow-none ${getStatusBadgeClass(item.status)}`}>{item.status}</Badge>
                           </div>
                           <p className="mt-3 text-sm leading-6 text-slate-600">{item.promotionText || item.description || '--'}</p>
+                          <p className="mt-2 text-xs font-medium text-slate-500">{getCouponScopeLabel(item)}</p>
                           <p className="mt-3 text-xs text-slate-500">
                             {item.discountType === 'percent' ? `${item.percentOff}%` : `${item.amountOff} ${item.currency}`} - {item.redemptionCount}/{item.maxRedemptions || t('learning.admin_unlimited')}
                           </p>
-                          <Button type="button" variant="outline" size="sm" className="mt-4 rounded-[8px]" onClick={() => hydrateCouponForm(item)}>{t('learning.admin_edit')}</Button>
+                          <div className="mt-4 flex flex-wrap gap-2">
+                            <Button type="button" variant="outline" size="sm" className="rounded-[8px]" onClick={() => hydrateCouponForm(item)}>{t('learning.admin_edit')}</Button>
+                            {item.status === 'draft' && (
+                              <Button type="button" size="sm" className="rounded-[8px]" onClick={() => updateCouponStatus(item, 'active')}>
+                                {copy('learning.admin_activate', 'Activate')}
+                              </Button>
+                            )}
+                            {item.status === 'active' && (
+                              <Button type="button" variant="outline" size="sm" className="rounded-[8px]" onClick={() => updateCouponStatus(item, 'draft')}>
+                                {copy('learning.admin_move_to_draft', 'Move to draft')}
+                              </Button>
+                            )}
+                            {item.status === 'archived' && (
+                              <Button type="button" variant="outline" size="sm" className="rounded-[8px]" onClick={() => updateCouponStatus(item, 'draft')}>
+                                {copy('learning.admin_restore_draft', 'Restore draft')}
+                              </Button>
+                            )}
+                            <Button
+                              type="button"
+                              variant="outline"
+                              size="sm"
+                              className="rounded-[8px] border-red-200 text-red-700 hover:bg-red-50"
+                              onClick={() => requestDelete('coupon', item)}
+                            >
+                              {copy('learning.admin_delete', 'Delete')}
+                            </Button>
+                          </div>
                         </article>
                       ))}
-                      {selectedCoupons.length === 0 && (
+                      {allCoupons.length === 0 && (
                         <div className="rounded-[8px] border border-dashed border-black/10 bg-[#f7f7f7] p-4 text-sm text-slate-500">{t('learning.admin_no_coupons')}</div>
                       )}
                     </CardContent>

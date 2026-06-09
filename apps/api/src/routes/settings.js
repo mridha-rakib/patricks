@@ -14,4 +14,12 @@ router.get('/fees', async (req, res) => {
   });
 });
 
+router.get('/shop-visibility', async (req, res) => {
+  const settings = await getPlatformSettings();
+
+  res.json({
+    shop_enabled: settings.shop_enabled,
+  });
+});
+
 export default router;

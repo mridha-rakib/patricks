@@ -18,14 +18,68 @@ const inlineClassBySize = {
 
 const getAssetUrl = (value) => getLearningAssetUrl(value) || String(value || '').trim();
 
+const coverMetadataPattern = /^(cover|title|titel|author|autor|autorin|authors|edition|auflage|ausgabe|publisher|verlag|isbn|doi|copyright|version|stand|created|erstellt|date|datum)\s*[:\-|]/i;
+const coverMetadataValuePattern = /^(isbn|doi)\s+/i;
+const coverPagePattern = /^(cover page|deckblatt|titelblatt|book cover|pdf metadata)$/i;
+
+const getBlockText = (block) => {
+  if (block.type === 'list') {
+    return (block.items || []).join('\n');
+  }
+
+  if (block.type !== 'paragraph') {
+    return '';
+  }
+
+  if (Array.isArray(block.spans) && block.spans.length > 0) {
+    return block.spans.map((span) => span.text).join('');
+  }
+
+  return block.text || '';
+};
+
+const isCoverMetadataBlock = (block) => {
+  const lines = getBlockText(block)
+    .split(/\r?\n/)
+    .map((line) => line.trim())
+    .filter(Boolean);
+
+  if (lines.length === 0 || lines.length > 6) return false;
+
+  return lines.every((line) =>
+    coverMetadataPattern.test(line)
+    || coverMetadataValuePattern.test(line)
+    || coverPagePattern.test(line));
+};
+
+const stripLeadingCoverMetadata = (blocks) => {
+  let contentStarted = false;
+
+  return blocks.filter((block, index) => {
+    if (contentStarted || index > 12) {
+      contentStarted = true;
+      return true;
+    }
+
+    if (isCoverMetadataBlock(block)) {
+      return false;
+    }
+
+    contentStarted = true;
+    return true;
+  });
+};
+
 const LearningRichContentRenderer = ({
   blocks,
   fallbackText = '',
   className = '',
   compact = false,
 }) => {
-  const normalizedBlocks = normalizeLearningRichBlocks(blocks, fallbackText)
-    .filter((block) => block.type !== 'paragraph' || block.text.trim());
+  const normalizedBlocks = stripLeadingCoverMetadata(
+    normalizeLearningRichBlocks(blocks, fallbackText)
+      .filter((block) => block.type !== 'paragraph' || block.text.trim()),
+  );
 
   if (normalizedBlocks.length === 0) {
     return null;
@@ -54,12 +108,12 @@ const LearningRichContentRenderer = ({
           const hasHeader = block.header?.some((cell) => String(cell || '').trim());
           return (
             <div key={block.id} className="overflow-x-auto rounded-[8px] border border-black/10 bg-white">
-              <table className="min-w-full border-collapse text-left text-sm">
+              <table className="min-w-[640px] border-collapse text-left text-sm">
                 {hasHeader && (
                   <thead className="bg-slate-100 text-slate-900">
                     <tr>
                       {block.header.map((cell, index) => (
-                        <th key={`${block.id}-head-${index}`} className="border-b border-black/10 px-4 py-3 font-semibold">
+                        <th key={`${block.id}-head-${index}`} className="border-b border-black/10 px-4 py-3 align-top font-semibold">
                           {cell}
                         </th>
                       ))}
@@ -70,7 +124,7 @@ const LearningRichContentRenderer = ({
                   {block.rows.map((row, rowIndex) => (
                     <tr key={`${block.id}-row-${rowIndex}`} className="border-t border-black/5 first:border-t-0">
                       {row.map((cell, cellIndex) => (
-                        <td key={`${block.id}-cell-${rowIndex}-${cellIndex}`} className="px-4 py-3 text-slate-700">
+                        <td key={`${block.id}-cell-${rowIndex}-${cellIndex}`} className="px-4 py-3 align-top text-slate-700">
                           {cell}
                         </td>
                       ))}

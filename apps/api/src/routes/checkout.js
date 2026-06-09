@@ -106,7 +106,7 @@ const normalizeCartItem = (item, index) => {
     product_price: parseFloat(productPrice),
     seller_id: sellerId ? String(sellerId).trim() : '',
     product_type: productType,
-    quantity: parseInt(quantity, 10),
+    quantity: productType === 'shop' ? parseInt(quantity, 10) : 1,
   };
 
   logger.info(`[CHECKOUT] Cart item normalized successfully at index ${itemIndex} - Product: ${normalizedItem.product_id}, Price: €${normalizedItem.product_price}, Quantity: ${normalizedItem.quantity}`);
@@ -291,6 +291,14 @@ router.post('/create-session', async (req, res) => {
   const fees = await getPlatformSettings();
   const shippingFee = fees.shipping_fee;
   const serviceFee = fees.service_fee;
+
+  if (!fees.shop_enabled && normalizedItems.some((item) => item.product_type === 'shop')) {
+    logger.warn(`[CHECKOUT] Shop checkout blocked while shop is disabled - Buyer: ${buyerIdStr}`);
+    return res.status(403).json({
+      code: 'SHOP_DISABLED',
+      error: 'The official shop is currently unavailable',
+    });
+  }
 
   let subtotal = 0;
   const lineItems = [];

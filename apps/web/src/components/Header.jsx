@@ -4,6 +4,7 @@ import { Menu, Search, Heart, ShoppingBag, LogIn, X, User, Trash2, Minus, Plus, 
 import { useAuth } from '@/contexts/AuthContext.jsx';
 import { useCart } from '@/contexts/CartContext.jsx';
 import { useFavorites } from '@/contexts/FavoritesContext.jsx';
+import { useShopVisibility } from '@/contexts/ShopVisibilityContext.jsx';
 import { useTranslation } from '@/contexts/TranslationContext.jsx';
 import pb from '@/lib/pocketbaseClient.js';
 import apiServerClient from '@/lib/apiServerClient.js';
@@ -27,6 +28,7 @@ const Header = () => {
   const { currentUser, isAuthenticated, isSeller, isAdmin, logout } = useAuth();
   const { cartItems, itemCount, removeFromCart, updateQuantity, getTotal } = useCart();
   const { t, language, setLanguage } = useTranslation();
+  const { shopEnabled } = useShopVisibility();
   
   // CRITICAL FIX: Use FavoritesContext instead of manual API calls
   const { favorites, loading: favLoading, removeFromFavorites } = useFavorites();
@@ -50,9 +52,10 @@ const Header = () => {
   const searchRef = useRef(null);
   const navItemRefs = useRef({});
 
+  const showShopNavigation = shopEnabled;
   const navLinks = [
     { name: t('nav.home'), path: '/' },
-    { name: t('nav.shop'), path: '/shop' },
+    ...(showShopNavigation ? [{ name: t('nav.shop'), path: '/shop' }] : []),
     { name: t('nav.marketplace'), path: '/marketplace' },
     { name: t('nav.learning'), path: '/learning' },
   ];
@@ -91,7 +94,7 @@ const Header = () => {
     updateNavIndicator();
     window.addEventListener('resize', updateNavIndicator);
     return () => window.removeEventListener('resize', updateNavIndicator);
-  }, [hoveredNavPath, location.pathname, language]);
+  }, [hoveredNavPath, location.pathname, language, showShopNavigation]);
 
   useEffect(() => {
     console.log('🔄 useEffect triggered in Header (Mobile Check)');
@@ -546,7 +549,10 @@ const Header = () => {
                 <p className="text-gray-500">{t('cart.empty_title')}</p>
               </div>
             ) : (
-              cartItems.map((item) => (
+              cartItems.map((item) => {
+                const isMarketplaceItem = item.product_type !== 'shop';
+
+                return (
                 <div key={item.id} className="flex gap-3 bg-gray-50 p-3 rounded-[8px]">
                   <div className="w-20 h-20 bg-white rounded-lg overflow-hidden flex-shrink-0 border border-gray-100">
                     {getProductImageUrl(item.product) && (
@@ -559,22 +565,29 @@ const Header = () => {
                       <p className="text-xs text-gray-500 mt-1">€{item.product?.price.toFixed(2)}</p>
                     </div>
                     <div className="flex items-center justify-between mt-2">
-                      <div className="flex items-center gap-1 bg-white rounded-md border border-gray-200">
-                        <button onClick={() => updateQuantity(item.id, item.product_id, item.quantity - 1)} disabled={item.quantity <= 1} className="p-1 text-gray-500 disabled:opacity-50">
-                          <Minus size={14} />
-                        </button>
-                        <span className="text-xs font-medium w-6 text-center">{item.quantity}</span>
-                        <button onClick={() => updateQuantity(item.id, item.product_id, item.quantity + 1)} className="p-1 text-gray-500">
-                          <Plus size={14} />
-                        </button>
-                      </div>
+                      {isMarketplaceItem ? (
+                        <span className="rounded-md border border-gray-200 bg-white px-2.5 py-1 text-xs font-medium text-gray-600">
+                          {t('common.quantity')}: 1
+                        </span>
+                      ) : (
+                        <div className="flex items-center gap-1 bg-white rounded-md border border-gray-200">
+                          <button onClick={() => updateQuantity(item.id, item.product_id, item.quantity - 1)} disabled={item.quantity <= 1} className="p-1 text-gray-500 disabled:opacity-50">
+                            <Minus size={14} />
+                          </button>
+                          <span className="text-xs font-medium w-6 text-center">{item.quantity}</span>
+                          <button onClick={() => updateQuantity(item.id, item.product_id, item.quantity + 1)} className="p-1 text-gray-500">
+                            <Plus size={14} />
+                          </button>
+                        </div>
+                      )}
                       <button onClick={() => removeFromCart(item.id, item.product_id)} className="text-red-500 p-1">
                         <Trash2 size={16} />
                       </button>
                     </div>
                   </div>
                 </div>
-              ))
+                );
+              })
             )}
           </div>
           

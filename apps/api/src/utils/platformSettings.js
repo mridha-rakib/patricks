@@ -6,6 +6,7 @@ export const DEFAULT_PLATFORM_SETTINGS = Object.freeze({
   service_fee: 1.99,
   transaction_fee_percentage: 7,
   verification_fee: 15,
+  shop_enabled: false,
 });
 
 const toFiniteNumber = (value, fallback) => {
@@ -17,6 +18,30 @@ const toFiniteNumber = (value, fallback) => {
   return Number.isFinite(parsed) ? parsed : fallback;
 };
 
+const toBoolean = (value, fallback) => {
+  if (value === undefined || value === null || value === '') {
+    return fallback;
+  }
+
+  if (typeof value === 'boolean') {
+    return value;
+  }
+
+  if (typeof value === 'number') {
+    return value === 1;
+  }
+
+  const normalized = String(value).trim().toLowerCase();
+  if (['true', '1', 'yes', 'on'].includes(normalized)) {
+    return true;
+  }
+  if (['false', '0', 'no', 'off'].includes(normalized)) {
+    return false;
+  }
+
+  return fallback;
+};
+
 export const normalizePlatformSettings = (settings = {}) => ({
   shipping_fee: toFiniteNumber(settings.shipping_fee, DEFAULT_PLATFORM_SETTINGS.shipping_fee),
   service_fee: toFiniteNumber(settings.service_fee, DEFAULT_PLATFORM_SETTINGS.service_fee),
@@ -25,6 +50,7 @@ export const normalizePlatformSettings = (settings = {}) => ({
     DEFAULT_PLATFORM_SETTINGS.transaction_fee_percentage,
   ),
   verification_fee: toFiniteNumber(settings.verification_fee, DEFAULT_PLATFORM_SETTINGS.verification_fee),
+  shop_enabled: toBoolean(settings.shop_enabled, DEFAULT_PLATFORM_SETTINGS.shop_enabled),
 });
 
 export const getPlatformSettings = async () => {

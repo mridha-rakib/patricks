@@ -1,7 +1,7 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { Helmet } from 'react-helmet';
-import { useSearchParams } from 'react-router-dom';
-import { SlidersHorizontal } from 'lucide-react';
+import { Link, useSearchParams } from 'react-router-dom';
+import { PackageSearch, Settings, SlidersHorizontal } from 'lucide-react';
 import { Button } from '@/components/ui/button.jsx';
 import { Input } from '@/components/ui/input.jsx';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select.jsx';
@@ -12,6 +12,7 @@ import { toast } from 'sonner';
 import apiServerClient from '@/lib/apiServerClient.js';
 import { subscribeToNewsletter } from '@/lib/newsletterApi.js';
 import { useAuth } from '@/contexts/AuthContext.jsx';
+import { useShopVisibility } from '@/contexts/ShopVisibilityContext.jsx';
 import { useTranslation } from '@/contexts/TranslationContext.jsx';
 import {
   appendFilterSearchParams,
@@ -28,7 +29,8 @@ const DEFAULT_FILTERS = getEmptyFilterValues(DEFAULT_SHOP_FILTER_DEFINITIONS);
 
 const ShopPage = () => {
   const [searchParams, setSearchParams] = useSearchParams();
-  const { currentUser } = useAuth();
+  const { currentUser, isAdmin } = useAuth();
+  const { shopEnabled, loading: shopVisibilityLoading } = useShopVisibility();
   const { t, language } = useTranslation();
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -40,6 +42,12 @@ const ShopPage = () => {
   const currentSort = searchParams.get('sort') || '-created';
 
   const loadProducts = useCallback(async ({ showLoading = false } = {}) => {
+    if (!shopEnabled) {
+      setProducts([]);
+      setLoading(false);
+      return;
+    }
+
     if (showLoading) {
       setLoading(true);
     }
@@ -77,11 +85,12 @@ const ShopPage = () => {
         setLoading(false);
       }
     }
-  }, [currentSort, filterDefinitions, filters, t]);
+  }, [currentSort, filterDefinitions, filters, shopEnabled, t]);
 
   useEffect(() => {
+    if (shopVisibilityLoading) return;
     loadProducts({ showLoading: true });
-  }, [loadProducts]);
+  }, [loadProducts, shopVisibilityLoading]);
 
   const handleSortChange = (value) => {
     const nextParams = new URLSearchParams(searchParams);
@@ -124,6 +133,44 @@ const ShopPage = () => {
     count: products.length,
     label: products.length === 1 ? t('marketplace.product_singular') : t('marketplace.product_plural'),
   });
+
+  if (!shopVisibilityLoading && !shopEnabled) {
+    return (
+      <>
+        <Helmet>
+          <title>{t('shop.meta_title')}</title>
+          <meta name="description" content={t('shop.meta_description')} />
+        </Helmet>
+
+        <main className="flex-1 bg-[#f7f7f7] px-4 py-12 sm:px-6 lg:px-8">
+          <section className="mx-auto flex min-h-[520px] max-w-3xl flex-col items-center justify-center rounded-[8px] border border-black/10 bg-white px-6 py-14 text-center shadow-sm">
+            <div className="flex h-16 w-16 items-center justify-center rounded-[8px] bg-[#f1f1ff] text-[#0000FF]">
+              <PackageSearch className="h-8 w-8" />
+            </div>
+            <h1 className="mt-6 text-3xl font-bold tracking-tight text-[#151515] md:text-4xl">
+              {t('shop.unavailable_title')}
+            </h1>
+            <p className="mx-auto mt-4 max-w-xl text-sm leading-6 text-[#666666] md:text-base">
+              {t('shop.unavailable_body')}
+            </p>
+            <div className="mt-8 flex w-full flex-col justify-center gap-3 sm:w-auto sm:flex-row">
+              <Button asChild className="h-11 rounded-[8px] bg-[#0000FF] px-5 text-white shadow-none hover:bg-[#0000CC]">
+                <Link to="/marketplace">{t('shop.go_marketplace')}</Link>
+              </Button>
+              {isAdmin && (
+                <Button asChild variant="outline" className="h-11 rounded-[8px] border-black/10 bg-white px-5 shadow-none hover:bg-[#f3f3ff]">
+                  <Link to="/admin">
+                    <Settings className="h-4 w-4" />
+                    {t('shop.admin_manage')}
+                  </Link>
+                </Button>
+              )}
+            </div>
+          </section>
+        </main>
+      </>
+    );
+  }
 
   return (
     <>

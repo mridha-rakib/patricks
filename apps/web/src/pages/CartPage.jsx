@@ -18,6 +18,7 @@ import {
 import { Badge } from '@/components/ui/badge.jsx';
 import { Button } from '@/components/ui/button.jsx';
 import { useCart } from '@/contexts/CartContext.jsx';
+import { useShopVisibility } from '@/contexts/ShopVisibilityContext.jsx';
 import { useTranslation } from '@/contexts/TranslationContext.jsx';
 import { getProductImageUrl as resolveProductImageUrl } from '@/lib/productImages.js';
 
@@ -45,7 +46,9 @@ const CartPage = () => {
     SERVICE_FEE,
     itemCount,
   } = useCart();
+  const { shopEnabled } = useShopVisibility();
   const { t, language } = useTranslation();
+  const canSeeShop = shopEnabled;
 
   const locale = language === 'DE' ? 'de-DE' : 'en-US';
   const formatPrice = (value) =>
@@ -115,14 +118,16 @@ const CartPage = () => {
                 <ShoppingBag className="h-4 w-4" />
                 {t('cart.go_marketplace')}
               </Button>
-              <Button
-                type="button"
-                variant="outline"
-                onClick={() => navigate('/shop')}
-                className="h-11 rounded-[8px] border-black/10 bg-white px-5 shadow-none hover:bg-[#f3f3ff]"
-              >
-                {t('nav.shop')}
-              </Button>
+              {canSeeShop && (
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => navigate('/shop')}
+                  className="h-11 rounded-[8px] border-black/10 bg-white px-5 shadow-none hover:bg-[#f3f3ff]"
+                >
+                  {t('nav.shop')}
+                </Button>
+              )}
             </div>
           </section>
         </main>
@@ -193,6 +198,7 @@ const CartPage = () => {
                 const quantity = Number(item.quantity || 1);
                 const lineTotal = unitPrice * quantity;
                 const productPath = getProductPath(item);
+                const isMarketplaceItem = item.product_type !== 'shop';
 
                 return (
                   <article
@@ -267,28 +273,34 @@ const CartPage = () => {
                             <p className="mt-1 text-lg font-bold text-[#151515]">{formatPrice(unitPrice)}</p>
                           </div>
 
-                          <div className="flex w-fit items-center rounded-[8px] border border-black/10 bg-[#f7f7f7] p-1">
-                            <button
-                              type="button"
-                              className="flex h-9 w-9 items-center justify-center rounded-[6px] text-[#666666] transition-colors hover:bg-white disabled:cursor-not-allowed disabled:opacity-40"
-                              onClick={() => updateQuantity(item.id, item.product_id, quantity - 1)}
-                              disabled={quantity <= 1}
-                              aria-label={t('cart.decrease_quantity')}
-                            >
-                              <Minus className="h-4 w-4" />
-                            </button>
-                            <span className="w-10 text-center text-sm font-bold text-[#151515]" aria-label={t('common.quantity')}>
-                              {quantity}
-                            </span>
-                            <button
-                              type="button"
-                              className="flex h-9 w-9 items-center justify-center rounded-[6px] text-[#666666] transition-colors hover:bg-white"
-                              onClick={() => updateQuantity(item.id, item.product_id, quantity + 1)}
-                              aria-label={t('cart.increase_quantity')}
-                            >
-                              <Plus className="h-4 w-4" />
-                            </button>
-                          </div>
+                          {isMarketplaceItem ? (
+                            <div className="w-fit rounded-[8px] border border-black/10 bg-[#f7f7f7] px-4 py-3 text-sm font-semibold text-[#666666]">
+                              {t('common.quantity')}: 1
+                            </div>
+                          ) : (
+                            <div className="flex w-fit items-center rounded-[8px] border border-black/10 bg-[#f7f7f7] p-1">
+                              <button
+                                type="button"
+                                className="flex h-9 w-9 items-center justify-center rounded-[6px] text-[#666666] transition-colors hover:bg-white disabled:cursor-not-allowed disabled:opacity-40"
+                                onClick={() => updateQuantity(item.id, item.product_id, quantity - 1)}
+                                disabled={quantity <= 1}
+                                aria-label={t('cart.decrease_quantity')}
+                              >
+                                <Minus className="h-4 w-4" />
+                              </button>
+                              <span className="w-10 text-center text-sm font-bold text-[#151515]" aria-label={t('common.quantity')}>
+                                {quantity}
+                              </span>
+                              <button
+                                type="button"
+                                className="flex h-9 w-9 items-center justify-center rounded-[6px] text-[#666666] transition-colors hover:bg-white"
+                                onClick={() => updateQuantity(item.id, item.product_id, quantity + 1)}
+                                aria-label={t('cart.increase_quantity')}
+                              >
+                                <Plus className="h-4 w-4" />
+                              </button>
+                            </div>
+                          )}
 
                           <div className="md:text-right">
                             <p className="text-xs font-semibold uppercase tracking-[0.14em] text-[#777777]">{t('cart.line_total')}</p>

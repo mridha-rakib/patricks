@@ -40,6 +40,7 @@ import {
 } from '@/components/ui/dropdown-menu.jsx';
 import { LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import { toast } from 'sonner';
+import { useShopVisibility } from '@/contexts/ShopVisibilityContext.jsx';
 import { useTranslation } from '@/contexts/TranslationContext.jsx';
 
 const parseShippingAddress = (rawAddress) => {
@@ -103,6 +104,7 @@ const ORDER_REFUNDABLE_STATUSES = new Set(['paid', 'waiting_admin_validation', '
 
 const AdminDashboardPage = () => {
   const { t, language } = useTranslation();
+  const { refreshShopVisibility } = useShopVisibility();
   const [activeTab, setActiveTab] = useState('overview');
   const [loading, setLoading] = useState(true);
   const [lastRefresh, setLastRefresh] = useState(new Date());
@@ -123,6 +125,7 @@ const AdminDashboardPage = () => {
     service_fee: 1.99,
     transaction_fee_percentage: 7,
     verification_fee: 15,
+    shop_enabled: false,
   });
 
   const [orderSearch, setOrderSearch] = useState('');
@@ -208,6 +211,7 @@ const AdminDashboardPage = () => {
       service_fee: settings.service_fee ?? 1.99,
       transaction_fee_percentage: settings.transaction_fee_percentage ?? settings.transaction_fee_percent ?? 7,
       verification_fee: settings.verification_fee ?? 15,
+      shop_enabled: settings.shop_enabled === true,
     });
   }, [settings]);
 
@@ -1546,7 +1550,7 @@ const AdminDashboardPage = () => {
   const handleSettingsChange = (field, value) => {
     setSettingsForm(prev => ({
       ...prev,
-      [field]: value === '' ? '' : Number(value),
+      [field]: typeof value === 'boolean' ? value : value === '' ? '' : Number(value),
     }));
   };
 
@@ -1566,6 +1570,7 @@ const AdminDashboardPage = () => {
 
       const data = await res.json();
       setSettings(data);
+      refreshShopVisibility();
       toast.success(t('admin_dashboard.settings_saved'));
     } catch (error) {
       toast.error(t('admin_dashboard.settings_save_error'));
@@ -3054,6 +3059,22 @@ const AdminDashboardPage = () => {
                         value={settingsForm.verification_fee}
                         onChange={(e) => handleSettingsChange('verification_fee', e.target.value)}
                       />
+                    </div>
+                    <div className="flex flex-col gap-3 rounded-[8px] border border-slate-200 bg-slate-50 p-4 sm:flex-row sm:items-center sm:justify-between">
+                      <div>
+                        <label className="text-sm font-medium">{t('admin_dashboard.shop_visibility')}</label>
+                        <p className="mt-1 text-sm text-muted-foreground">{t('admin_dashboard.shop_visibility_description')}</p>
+                      </div>
+                      <div className="flex items-center gap-3">
+                        <span className="text-sm font-medium text-slate-700">
+                          {settingsForm.shop_enabled ? t('admin_dashboard.shop_enabled') : t('admin_dashboard.shop_disabled')}
+                        </span>
+                        <Switch
+                          checked={settingsForm.shop_enabled}
+                          onCheckedChange={(checked) => handleSettingsChange('shop_enabled', checked)}
+                          aria-label={t('admin_dashboard.shop_visibility')}
+                        />
+                      </div>
                     </div>
                   </div>
                   <Button onClick={handleSaveSettings} className="w-full sm:w-auto bg-primary text-primary-foreground hover:bg-primary/90">
