@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { Helmet } from 'react-helmet';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
-import { ArrowRight, CalendarClock, CheckCircle2, Clock3, CreditCard, LockKeyhole, Search } from 'lucide-react';
+import { ArrowRight, CalendarClock, CheckCircle2, Clock3, CreditCard, LockKeyhole, PlayCircle, Search } from 'lucide-react';
 import { Button } from '@/components/ui/button.jsx';
 import { Badge } from '@/components/ui/badge.jsx';
 import AccountLayout from '@/components/AccountLayout.jsx';
@@ -160,6 +160,7 @@ const LearningDashboardPage = () => {
   }, [dashboard, subscriptionStatus]);
   const learningPlan = dashboard?.learningPlan;
   const featureAccess = dashboard?.featureAccess || {};
+  const canUseProgress = featureAccess.progress === true;
   const planSections = learningPlan?.sections || {};
   const planContinueAssignment = learningPlan?.continueAssignment;
   const planWeeklyPercent = getPlanProgressPercent(learningPlan?.weeklyProgress);
@@ -272,9 +273,11 @@ const LearningDashboardPage = () => {
           <h2 className="mt-3 text-3xl font-semibold text-slate-900">{t('learning.curriculum_preview')}</h2>
           <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-600">{t('learning.content_tree_body')}</p>
         </div>
-        <Badge className="w-fit rounded-[8px] bg-slate-100 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-600 shadow-none">
-          {dashboard.progress?.percent || 0}%
-        </Badge>
+        {canUseProgress && (
+          <Badge className="w-fit rounded-[8px] bg-slate-100 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-600 shadow-none">
+            {dashboard.progress?.percent || 0}%
+          </Badge>
+        )}
       </div>
 
       <div className="mt-6 space-y-4">
@@ -292,21 +295,25 @@ const LearningDashboardPage = () => {
                 <Badge className="rounded-[8px] bg-white px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-600 shadow-none">
                   {moduleRecord.lessons.length} {t('learning.lessons_count')}
                 </Badge>
-                <Badge className={`rounded-[8px] px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.14em] shadow-none ${getLearningTopicStatusToneClass(moduleRecord.progress?.topicStatus || moduleRecord.progress?.status)}`}>
-                  {getLearningTopicStatusLabel(t, moduleRecord.progress?.topicStatus || moduleRecord.progress?.status)}
-                </Badge>
+                {canUseProgress && (
+                  <Badge className={`rounded-[8px] px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.14em] shadow-none ${getLearningTopicStatusToneClass(moduleRecord.progress?.topicStatus || moduleRecord.progress?.status)}`}>
+                    {getLearningTopicStatusLabel(t, moduleRecord.progress?.topicStatus || moduleRecord.progress?.status)}
+                  </Badge>
+                )}
               </div>
             </div>
 
-            <div className="mt-4 max-w-sm">
-              <div className="flex items-center justify-between gap-3 text-xs text-slate-500">
-                <span>{t('learning.progress')}</span>
-                <span>{moduleRecord.progress?.completedLessons || 0}/{moduleRecord.progress?.totalLessons || moduleRecord.lessons.length}</span>
+            {canUseProgress && (
+              <div className="mt-4 max-w-sm">
+                <div className="flex items-center justify-between gap-3 text-xs text-slate-500">
+                  <span>{t('learning.progress')}</span>
+                  <span>{moduleRecord.progress?.completedLessons || 0}/{moduleRecord.progress?.totalLessons || moduleRecord.lessons.length}</span>
+                </div>
+                <div className="learning-progress-track mt-2">
+                  <div className="learning-progress-fill" style={{ width: `${moduleRecord.progress?.percent || 0}%` }} />
+                </div>
               </div>
-              <div className="learning-progress-track mt-2">
-                <div className="learning-progress-fill" style={{ width: `${moduleRecord.progress?.percent || 0}%` }} />
-              </div>
-            </div>
+            )}
 
             <div className="mt-5 space-y-3">
               {moduleRecord.lessons.map((lesson) => (
@@ -318,19 +325,23 @@ const LearningDashboardPage = () => {
                   <div className="min-w-0">
                     <p className="break-words text-sm font-semibold text-slate-900">{lesson.title}</p>
                     <p className="mt-1 text-xs text-slate-500">{getMinutesLabel(t, lesson.estimatedMinutes)}</p>
-                    <div className="learning-progress-track mt-3 max-w-[160px]">
-                      <div className="learning-progress-fill" style={{ width: `${lesson.progress?.progressPercentage || 0}%` }} />
-                    </div>
+                    {canUseProgress && (
+                      <div className="learning-progress-track mt-3 max-w-[160px]">
+                        <div className="learning-progress-fill" style={{ width: `${lesson.progress?.progressPercentage || 0}%` }} />
+                      </div>
+                    )}
                   </div>
-                  <Badge className={`w-fit rounded-[8px] px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.14em] shadow-none ${
-                    lesson.progress?.status === 'completed'
-                      ? 'bg-emerald-100 text-emerald-700'
-                      : lesson.progress?.status === 'in_progress'
-                        ? 'bg-[#0000FF]/10 text-[#0000FF]'
-                        : 'bg-slate-100 text-slate-500'
-                  }`}>
-                    {getLearningProgressStatusLabel(t, lesson.progress?.status)}
-                  </Badge>
+                  {canUseProgress && (
+                    <Badge className={`w-fit rounded-[8px] px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.14em] shadow-none ${
+                      lesson.progress?.status === 'completed'
+                        ? 'bg-emerald-100 text-emerald-700'
+                        : lesson.progress?.status === 'in_progress'
+                          ? 'bg-[#0000FF]/10 text-[#0000FF]'
+                          : 'bg-slate-100 text-slate-500'
+                    }`}>
+                      {getLearningProgressStatusLabel(t, lesson.progress?.status)}
+                    </Badge>
+                  )}
                 </Link>
               ))}
             </div>
@@ -525,15 +536,17 @@ const LearningDashboardPage = () => {
                   </div>
                 )}
 
-                <div className="mt-8 max-w-md">
-                  <div className="flex items-center justify-between gap-3 text-sm text-slate-500">
-                    <span>{t('learning.progress')}</span>
-                    <span>{dashboard.progress?.percent || 0}%</span>
+                {canUseProgress && (
+                  <div className="mt-8 max-w-md">
+                    <div className="flex items-center justify-between gap-3 text-sm text-slate-500">
+                      <span>{t('learning.progress')}</span>
+                      <span>{dashboard.progress?.percent || 0}%</span>
+                    </div>
+                    <div className="learning-progress-track mt-3">
+                      <div className="learning-progress-fill" style={{ width: `${dashboard.progress?.percent || 0}%` }} />
+                    </div>
                   </div>
-                  <div className="learning-progress-track mt-3">
-                    <div className="learning-progress-fill" style={{ width: `${dashboard.progress?.percent || 0}%` }} />
-                  </div>
-                </div>
+                )}
 
                 {continueLesson && (
                   <div className="learning-subtle-card mt-6 p-5">
@@ -745,10 +758,11 @@ const LearningDashboardPage = () => {
                 </Badge>
               </div>
 
-              <div className="mt-6 grid gap-3 md:grid-cols-3">
+              <div className="mt-6 grid gap-3 md:grid-cols-2 xl:grid-cols-4">
                 {[
                   { title: t('learning.exam_question_pool'), body: t('learning.exam_question_pool_body'), Icon: Search },
                   { title: t('learning.exam_training_mode'), body: t('learning.exam_training_mode_body'), Icon: Clock3 },
+                  { title: t('learning.exam_exam_mode'), body: t('learning.exam_exam_mode_body'), Icon: PlayCircle },
                   { title: t('learning.exam_analysis'), body: t('learning.exam_analysis_body'), Icon: CheckCircle2 },
                 ].map(({ title, body, Icon }) => (
                   <div key={title} className="learning-subtle-card p-5">
@@ -826,27 +840,29 @@ const LearningDashboardPage = () => {
             </div>
           </section>
 
-          <section className="learning-card mt-8 p-6 md:p-8">
-            <p className="text-xs font-semibold uppercase tracking-[0.16em] text-[#0000FF]/70">{t('learning.recently_opened')}</p>
-            <h2 className="mt-3 text-3xl font-semibold text-slate-900">{t('learning.most_recent_lesson')}</h2>
+          {canUseProgress && (
+            <section className="learning-card mt-8 p-6 md:p-8">
+              <p className="text-xs font-semibold uppercase tracking-[0.16em] text-[#0000FF]/70">{t('learning.recently_opened')}</p>
+              <h2 className="mt-3 text-3xl font-semibold text-slate-900">{t('learning.most_recent_lesson')}</h2>
 
-            <div className="mt-6 grid gap-3 md:grid-cols-3">
-              {dashboard.recentlyOpened?.length > 0 ? dashboard.recentlyOpened.map((lesson) => (
-                <Link key={lesson.id} to={getLearningSubtopicPath(lesson.package || dashboard.package, { slug: lesson.moduleSlug }, lesson)} className="learning-subtle-card block p-4 transition-colors hover:border-[#0000FF]/25 hover:bg-white">
-                  <p className="text-sm font-semibold uppercase tracking-[0.14em] text-[#0000FF]/70">
-                    {getLearningProgressStatusLabel(t, lesson.progress?.status || 'in_progress')}
-                  </p>
-                  <h3 className="mt-2 break-words text-xl font-semibold text-slate-900">{lesson.title}</h3>
-                  <p className="mt-2 text-sm leading-6 text-slate-600">{lesson.description}</p>
-                  <p className="mt-3 text-xs text-slate-500">{formatDate(lesson.progress?.lastOpenedAt, locale)}</p>
-                </Link>
-              )) : (
-                <div className="rounded-[8px] border border-dashed border-black/10 bg-[#f7f7f7] p-5 text-sm text-slate-500 md:col-span-3">
-                  {t('learning.no_recent')}
-                </div>
-              )}
-            </div>
-          </section>
+              <div className="mt-6 grid gap-3 md:grid-cols-3">
+                {dashboard.recentlyOpened?.length > 0 ? dashboard.recentlyOpened.map((lesson) => (
+                  <Link key={lesson.id} to={getLearningSubtopicPath(lesson.package || dashboard.package, { slug: lesson.moduleSlug }, lesson)} className="learning-subtle-card block p-4 transition-colors hover:border-[#0000FF]/25 hover:bg-white">
+                    <p className="text-sm font-semibold uppercase tracking-[0.14em] text-[#0000FF]/70">
+                      {getLearningProgressStatusLabel(t, lesson.progress?.status || 'in_progress')}
+                    </p>
+                    <h3 className="mt-2 break-words text-xl font-semibold text-slate-900">{lesson.title}</h3>
+                    <p className="mt-2 text-sm leading-6 text-slate-600">{lesson.description}</p>
+                    <p className="mt-3 text-xs text-slate-500">{formatDate(lesson.progress?.lastOpenedAt, locale)}</p>
+                  </Link>
+                )) : (
+                  <div className="rounded-[8px] border border-dashed border-black/10 bg-[#f7f7f7] p-5 text-sm text-slate-500 md:col-span-3">
+                    {t('learning.no_recent')}
+                  </div>
+                )}
+              </div>
+            </section>
+          )}
         </div>
       </AccountLayout>
     </>

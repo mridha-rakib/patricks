@@ -4,6 +4,7 @@ import test from 'node:test';
 import {
   canAccessZ3Tier,
   getLearningSubscriptionLookupCandidates,
+  getZ3TierFeatureAccess,
   getZ3TierRank,
   hasLearningSubscriptionLookupCandidates,
   isLearningTierCheckoutEnabled,
@@ -42,6 +43,61 @@ test('allows higher Z3 tiers to access lower-tier learning content only', () => 
     userTierSlug: 'unknown',
     requiredTierSlug: 'z3-start',
   }), false);
+});
+
+test('maps Z3 tiers to the intended learning feature access', () => {
+  assert.deepEqual(getZ3TierFeatureAccess({
+    userTierSlug: 'z3-start',
+    hasAccess: true,
+  }), {
+    content: true,
+    learningContent: true,
+    learningPlan: false,
+    dailyWeeklyTasks: false,
+    progress: false,
+    examTrainer: false,
+    questionPool: false,
+    trainingMode: false,
+    examMode: false,
+    analysis: false,
+  });
+
+  assert.deepEqual(getZ3TierFeatureAccess({
+    userTierSlug: 'z3-struktur',
+    hasAccess: true,
+  }), {
+    content: true,
+    learningContent: true,
+    learningPlan: true,
+    dailyWeeklyTasks: true,
+    progress: true,
+    examTrainer: false,
+    questionPool: false,
+    trainingMode: false,
+    examMode: false,
+    analysis: false,
+  });
+
+  assert.deepEqual(getZ3TierFeatureAccess({
+    userTierSlug: 'z3-pruefungstrainer',
+    hasAccess: true,
+  }), {
+    content: true,
+    learningContent: true,
+    learningPlan: true,
+    dailyWeeklyTasks: true,
+    progress: true,
+    examTrainer: true,
+    questionPool: true,
+    trainingMode: true,
+    examMode: true,
+    analysis: true,
+  });
+
+  assert.equal(getZ3TierFeatureAccess({
+    userTierSlug: 'z3-pruefungstrainer',
+    hasAccess: false,
+  }).content, false);
 });
 
 test('keeps all Z3 tiers enabled for checkout', () => {

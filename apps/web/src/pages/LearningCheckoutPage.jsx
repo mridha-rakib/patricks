@@ -4,7 +4,9 @@ import { Link, useLocation, useNavigate, useParams, useSearchParams } from 'reac
 import { ArrowLeft, ArrowRight, CheckCircle2, CreditCard, RefreshCw } from 'lucide-react';
 import { Badge } from '@/components/ui/badge.jsx';
 import { Button } from '@/components/ui/button.jsx';
+import { Checkbox } from '@/components/ui/checkbox.jsx';
 import { Input } from '@/components/ui/input.jsx';
+import { Label } from '@/components/ui/label.jsx';
 import {
   createLearningBillingPortal,
   createLearningCheckout,
@@ -56,6 +58,9 @@ const LearningCheckoutPage = () => {
   const [couponCode, setCouponCode] = useState('');
   const [couponApplying, setCouponApplying] = useState(false);
   const [appliedCoupon, setAppliedCoupon] = useState(null);
+  const [termsAccepted, setTermsAccepted] = useState(false);
+  const [privacyAccepted, setPrivacyAccepted] = useState(false);
+  const [newsletterOptIn, setNewsletterOptIn] = useState(false);
 
   useEffect(() => {
     let active = true;
@@ -173,6 +178,11 @@ const LearningCheckoutPage = () => {
       return;
     }
 
+    if (!termsAccepted || !privacyAccepted) {
+      toast.error(t('checkout.accept_toast'));
+      return;
+    }
+
     setSubmitting(true);
     try {
       const result = await createLearningCheckout({
@@ -180,6 +190,9 @@ const LearningCheckoutPage = () => {
         packageSlug: packageData.slug,
         billingCycle,
         couponCode: hasAppliedCoupon ? appliedCouponCode : '',
+        acceptedTerms: termsAccepted,
+        acceptedPrivacy: privacyAccepted,
+        newsletterOptIn,
       });
 
       if (result.freeSubscription) {
@@ -411,11 +424,67 @@ const LearningCheckoutPage = () => {
                   </div>
                 )}
 
+                {isAuthenticated && checkoutEnabled && canStartCheckout && (
+                  <section className="learning-subtle-card p-4" aria-label={t('checkout.legal_confirmations')}>
+                    <div>
+                      <h3 className="text-sm font-semibold text-slate-900">{t('checkout.legal_confirmations')}</h3>
+                      <p className="mt-1 text-xs leading-5 text-slate-500">{t('checkout.legal_body')}</p>
+                    </div>
+
+                    <div className="mt-4 space-y-3">
+                      <div className="flex items-start gap-3 rounded-[8px] bg-white p-3">
+                        <Checkbox
+                          id="learning-agb"
+                          checked={termsAccepted}
+                          onCheckedChange={(checked) => setTermsAccepted(checked === true)}
+                          className="mt-1"
+                        />
+                        <Label htmlFor="learning-agb" className="cursor-pointer text-sm font-normal leading-6 text-slate-600">
+                          {t('checkout.accept_terms')}{' '}
+                          <a href="/agb" target="_blank" rel="noreferrer" className="font-semibold text-[#0000FF] hover:underline">
+                            {t('checkout.terms')}
+                          </a>
+                          . <span className="font-semibold text-red-600">*</span>
+                        </Label>
+                      </div>
+
+                      <div className="flex items-start gap-3 rounded-[8px] bg-white p-3">
+                        <Checkbox
+                          id="learning-datenschutz"
+                          checked={privacyAccepted}
+                          onCheckedChange={(checked) => setPrivacyAccepted(checked === true)}
+                          className="mt-1"
+                        />
+                        <Label htmlFor="learning-datenschutz" className="cursor-pointer text-sm font-normal leading-6 text-slate-600">
+                          {t('checkout.accept_privacy')}{' '}
+                          <a href="/datenschutz" target="_blank" rel="noreferrer" className="font-semibold text-[#0000FF] hover:underline">
+                            {t('checkout.privacy')}
+                          </a>
+                          . <span className="font-semibold text-red-600">*</span>
+                        </Label>
+                      </div>
+
+                      <div className="flex items-start gap-3 rounded-[8px] bg-white p-3">
+                        <Checkbox
+                          id="learning-newsletter"
+                          checked={newsletterOptIn}
+                          onCheckedChange={(checked) => setNewsletterOptIn(checked === true)}
+                          className="mt-1"
+                        />
+                        <Label htmlFor="learning-newsletter" className="cursor-pointer text-sm font-normal leading-6 text-slate-600">
+                          {t('checkout.newsletter')}{' '}
+                          <span className="text-xs font-semibold text-slate-500">({t('checkout.optional')})</span>
+                        </Label>
+                      </div>
+                    </div>
+                  </section>
+                )}
+
                 {isAuthenticated ? (
                   <Button
                     type="button"
                     onClick={canStartCheckout ? handleCheckout : hasManagedSubscription ? handlePortal : undefined}
-                    disabled={primaryLoading || (!checkoutEnabled && !hasManagedSubscription)}
+                    disabled={primaryLoading || (!checkoutEnabled && !hasManagedSubscription) || (canStartCheckout && (!termsAccepted || !privacyAccepted))}
                     className={`h-11 w-full rounded-[8px] shadow-none ${
                       !checkoutEnabled && !hasManagedSubscription
                         ? 'cursor-not-allowed bg-slate-200 text-slate-500 opacity-100 hover:bg-slate-200'

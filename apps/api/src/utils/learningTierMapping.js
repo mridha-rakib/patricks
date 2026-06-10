@@ -76,6 +76,32 @@ export const canAccessZ3Tier = ({ userTierSlug, requiredTierSlug }) => {
   return getZ3TierRank(userTierSlug) >= requiredRank;
 };
 
+export const getZ3TierFeatureAccess = ({ userTierSlug, hasAccess = false } = {}) => {
+  const normalizedTierSlug = normalizeZ3TierSlug(userTierSlug);
+  const content = Boolean(hasAccess && getZ3TierRank(normalizedTierSlug) > 0);
+  const learningPlan = Boolean(content && canAccessZ3Tier({
+    userTierSlug: normalizedTierSlug,
+    requiredTierSlug: Z3_LEARNING_TIERS.STRUKTUR,
+  }));
+  const examTrainer = Boolean(content && canAccessZ3Tier({
+    userTierSlug: normalizedTierSlug,
+    requiredTierSlug: Z3_LEARNING_TIERS.PRUEFUNGSTRAINER,
+  }));
+
+  return {
+    content,
+    learningContent: content,
+    learningPlan,
+    dailyWeeklyTasks: learningPlan,
+    progress: learningPlan,
+    examTrainer,
+    questionPool: examTrainer,
+    trainingMode: examTrainer,
+    examMode: examTrainer,
+    analysis: examTrainer,
+  };
+};
+
 export const isLearningTierCheckoutEnabled = (tierSlug) => {
   const normalized = normalizeZ3TierSlug(tierSlug);
   if (!normalized) return true;

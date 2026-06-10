@@ -112,14 +112,29 @@ export const recalculateLearningPlan = async ({ token }) => {
   return withJson(response);
 };
 
-export const createLearningCheckout = async ({ token, packageSlug, billingCycle = 'month', couponCode = '' }) => {
+export const createLearningCheckout = async ({
+  token,
+  packageSlug,
+  billingCycle = 'month',
+  couponCode = '',
+  acceptedTerms = false,
+  acceptedPrivacy = false,
+  newsletterOptIn = false,
+}) => {
   const response = await apiServerClient.fetch('/learning/checkout', {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
       Authorization: `Bearer ${token}`,
     },
-    body: JSON.stringify({ packageSlug, billingCycle, couponCode }),
+    body: JSON.stringify({
+      packageSlug,
+      billingCycle,
+      couponCode,
+      acceptedTerms,
+      acceptedPrivacy,
+      newsletterOptIn,
+    }),
   });
 
   return withJson(response);

@@ -1,0 +1,131 @@
+
+> api@0.0.0 dev
+> node --watch --watch-path=src --watch-path=.env src/main.js
+
+[INFO] Connecting to PocketBase at http://127.0.0.1:8090
+[INFO] [CHECKOUT] Configuration loaded from environment variables
+[INFO] [CHECKOUT] Frontend URL: https://android-immature-scarring.ngrok-free.dev
+[INFO] [DHL-SERVICE] DHL Configuration loaded from environment variables
+[INFO] [DHL-SERVICE] Token URL: https://api-eu.dhl.com/parcel/de/account/auth/ropc/v1/token
+[INFO] [DHL-SERVICE] Shipping URL: https://api-eu.dhl.com/parcel/de/shipping/v2/orders
+[INFO] [DHL-SERVICE] Warehouse: Patrick Tchoquessi, Angelika-machinek-Straße 12, 60486 Frankfurt, DE
+[INFO] [MAIN] Registering Stripe webhook handler
+[INFO] [MAIN] Registering auth middleware BEFORE routes
+[INFO] [MAIN] Mounting routes
+[INFO] [ROUTES] Registering /checkout routes
+[INFO] [ROUTES] Registering /dhl-labels routes
+[INFO] [ROUTES] Registering /tracking routes
+[INFO] [ROUTES] Registering /favorites routes
+[INFO] [ROUTES] Registering /admin routes
+[INFO] [ROUTES] Registering /email routes
+[INFO] [ROUTES] Registering /verification routes
+[INFO] [ROUTES] Registering /orders routes
+[INFO] [ROUTES] Registering /returns routes
+[INFO] [ROUTES] Registering /search routes
+[INFO] [ROUTES] Registering /settings routes
+[INFO] [ROUTES] Registering /seller routes
+[INFO] [ROUTES] Registering /learning routes
+[INFO] [ROUTES] Registering /marketplace routes
+[INFO] [ROUTES] Registering /shop routes
+[INFO] [ROUTES] Registering /reviews routes
+[INFO] [ROUTES] Stripe webhook is registered in main.js with express.raw() middleware
+[INFO] [ROUTES] All routes registered successfully
+[INFO] 🚀 API Server running on http://localhost:3001
+[INFO] PocketBase client initialized successfully
+[INFO] [AUTH] Authorization header received: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJjb2...
+[INFO] [AUTH] Token extracted. Length: 224
+[INFO] [AUTH] Authorization header received: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJjb2...
+[INFO] [AUTH] Token extracted. Length: 224
+[INFO] [AUTH] SUCCESS via PocketBase authRefresh - User ID: vhjcsdc36gb3ybo, Email: admin@zahniboerse.com, Admin: true
+[INFO] [AUTH] SUCCESS via PocketBase authRefresh - User ID: vhjcsdc36gb3ybo, Email: admin@zahniboerse.com, Admin: true
+::ffff:127.0.0.1 - - [10/Jun/2026:20:20:03 +0000] "GET /settings/shop-visibility HTTP/1.1" 200 22 "http://localhost:3000/learning/subscribe/z3-start?cycle=month" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/149.0.0.0 Safari/537.36"
+::ffff:127.0.0.1 - - [10/Jun/2026:20:20:03 +0000] "GET /settings/fees HTTP/1.1" 200 93 "http://localhost:3000/learning/subscribe/z3-start?cycle=month" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/149.0.0.0 Safari/537.36"
+::ffff:127.0.0.1 - - [10/Jun/2026:20:20:23 +0000] "GET /settings/fees HTTP/1.1" 200 93 "http://localhost:3000/learning" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/149.0.0.0 Safari/537.36"
+::ffff:127.0.0.1 - - [10/Jun/2026:20:20:23 +0000] "GET /settings/shop-visibility HTTP/1.1" 200 22 "http://localhost:3000/learning" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/149.0.0.0 Safari/537.36"
+::ffff:127.0.0.1 - - [10/Jun/2026:20:20:23 +0000] "GET /learning/packages HTTP/1.1" 200 6576 "http://localhost:3000/learning" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/149.0.0.0 Safari/537.36"
+[INFO] [AUTH] Authorization header received: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJjb2...
+[INFO] [AUTH] Token extracted. Length: 224
+[INFO] [AUTH] Authorization header received: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJjb2...
+[INFO] [AUTH] Token extracted. Length: 224
+[INFO] [AUTH] SUCCESS via PocketBase authRefresh - User ID: vhjcsdc36gb3ybo, Email: admin@zahniboerse.com, Admin: true
+[INFO] [AUTH] SUCCESS via PocketBase authRefresh - User ID: vhjcsdc36gb3ybo, Email: admin@zahniboerse.com, Admin: true
+::ffff:127.0.0.1 - - [10/Jun/2026:20:20:33 +0000] "GET /settings/shop-visibility HTTP/1.1" 304 - "http://localhost:3000/learning/subscribe/z3-start?cycle=month" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/149.0.0.0 Safari/537.36"
+::ffff:127.0.0.1 - - [10/Jun/2026:20:20:33 +0000] "GET /settings/fees HTTP/1.1" 304 - "http://localhost:3000/learning/subscribe/z3-start?cycle=month" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/149.0.0.0 Safari/537.36"
+::ffff:127.0.0.1 - - [10/Jun/2026:20:20:38 +0000] "GET /settings/fees HTTP/1.1" 200 93 "http://localhost:3000/learning/topics/z3-start/test-module/subtopics/test-lesson-for-testing-purpose" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/149.0.0.0 Safari/537.36"
+::ffff:127.0.0.1 - - [10/Jun/2026:20:20:38 +0000] "GET /settings/shop-visibility HTTP/1.1" 200 22 "http://localhost:3000/learning/topics/z3-start/test-module/subtopics/test-lesson-for-testing-purpose" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/149.0.0.0 Safari/537.36"
+::ffff:127.0.0.1 - - [10/Jun/2026:20:20:38 +0000] "GET /learning/packages/z3-start HTTP/1.1" 200 9730 "http://localhost:3000/learning/topics/z3-start/test-module/subtopics/test-lesson-for-testing-purpose" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/149.0.0.0 Safari/537.36"
+[INFO] [AUTH] Authorization header received: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJjb2...
+[INFO] [AUTH] Token extracted. Length: 224
+[INFO] [AUTH] SUCCESS via PocketBase authRefresh - User ID: vhjcsdc36gb3ybo, Email: admin@zahniboerse.com, Admin: true
+::ffff:127.0.0.1 - - [10/Jun/2026:20:20:39 +0000] "GET /marketplace/products?page=1&perPage=50&sort=-created HTTP/1.1" 200 3008 "http://localhost:3000/marketplace" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/149.0.0.0 Safari/537.36"
+[INFO] [AUTH] Authorization header received: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJjb2...
+[INFO] [AUTH] Token extracted. Length: 224
+[INFO] [AUTH] SUCCESS via PocketBase authRefresh - User ID: vhjcsdc36gb3ybo, Email: admin@zahniboerse.com, Admin: true
+::ffff:127.0.0.1 - - [10/Jun/2026:20:20:39 +0000] "GET /marketplace/products?page=1&perPage=50&sort=-created HTTP/1.1" 304 - "http://localhost:3000/marketplace" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/149.0.0.0 Safari/537.36"
+[INFO] [AUTH] Authorization header received: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJjb2...
+[INFO] [AUTH] Token extracted. Length: 224
+[INFO] [AUTH] SUCCESS via PocketBase authRefresh - User ID: vhjcsdc36gb3ybo, Email: admin@zahniboerse.com, Admin: true
+::ffff:127.0.0.1 - - [10/Jun/2026:20:20:42 +0000] "GET /learning/packages HTTP/1.1" 200 6576 "http://localhost:3000/learning" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/149.0.0.0 Safari/537.36"
+[INFO] [AUTH] Authorization header received: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJjb2...
+[INFO] [AUTH] Token extracted. Length: 224
+[INFO] [AUTH] SUCCESS via PocketBase authRefresh - User ID: vhjcsdc36gb3ybo, Email: admin@zahniboerse.com, Admin: true
+[INFO] [AUTH] Authenticated user proceeding - ID: vhjcsdc36gb3ybo
+::ffff:127.0.0.1 - - [10/Jun/2026:20:20:43 +0000] "GET /learning/dashboard HTTP/1.1" 200 53767 "http://localhost:3000/learning/dashboard" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/149.0.0.0 Safari/537.36"
+[INFO] [AUTH] Authorization header received: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJjb2...
+[INFO] [AUTH] Token extracted. Length: 224
+[INFO] [AUTH] SUCCESS via PocketBase authRefresh - User ID: vhjcsdc36gb3ybo, Email: admin@zahniboerse.com, Admin: true
+::ffff:127.0.0.1 - - [10/Jun/2026:20:20:54 +0000] "GET /learning/packages/z3-start HTTP/1.1" 200 9730 "http://localhost:3000/learning/topics/z3-start/z3-start-road-to-z3-lernalltag/subtopics/z3-start-road-to-z3-lernalltag-tagesblock-vorbereiten" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/149.0.0.0 Safari/537.36"
+[INFO] [AUTH] Authorization header received: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJjb2...
+[INFO] [AUTH] Token extracted. Length: 224
+[INFO] [AUTH] SUCCESS via PocketBase authRefresh - User ID: vhjcsdc36gb3ybo, Email: admin@zahniboerse.com, Admin: true
+::ffff:127.0.0.1 - - [10/Jun/2026:20:20:54 +0000] "GET /learning/lessons/tr2si8otkndwi72 HTTP/1.1" 304 - "http://localhost:3000/learning/topics/z3-start/z3-start-road-to-z3-lernalltag/subtopics/z3-start-road-to-z3-lernalltag-tagesblock-vorbereiten" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/149.0.0.0 Safari/537.36"
+[INFO] [AUTH] Authorization header received: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJjb2...
+[INFO] [AUTH] Token extracted. Length: 224
+[INFO] [AUTH] SUCCESS via PocketBase authRefresh - User ID: vhjcsdc36gb3ybo, Email: admin@zahniboerse.com, Admin: true
+::ffff:127.0.0.1 - - [10/Jun/2026:20:20:57 +0000] "GET /learning/packages/z3-start HTTP/1.1" 304 - "http://localhost:3000/learning/topics/z3-start/z3-start-road-to-z3-lernalltag/subtopics/z3-start-road-to-z3-lernalltag-nacharbeiten-ohne-neustart" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/149.0.0.0 Safari/537.36"
+[INFO] [AUTH] Authorization header received: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJjb2...
+[INFO] [AUTH] Token extracted. Length: 224
+[INFO] [AUTH] SUCCESS via PocketBase authRefresh - User ID: vhjcsdc36gb3ybo, Email: admin@zahniboerse.com, Admin: true
+::ffff:127.0.0.1 - - [10/Jun/2026:20:20:57 +0000] "GET /learning/lessons/8ebv7d5ram6ecvk HTTP/1.1" 304 - "http://localhost:3000/learning/topics/z3-start/z3-start-road-to-z3-lernalltag/subtopics/z3-start-road-to-z3-lernalltag-nacharbeiten-ohne-neustart" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/149.0.0.0 Safari/537.36"
+[INFO] [AUTH] Authorization header received: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJjb2...
+[INFO] [AUTH] Token extracted. Length: 224
+[INFO] [AUTH] SUCCESS via PocketBase authRefresh - User ID: vhjcsdc36gb3ybo, Email: admin@zahniboerse.com, Admin: true
+::ffff:127.0.0.1 - - [10/Jun/2026:20:20:58 +0000] "GET /learning/packages/z3-start HTTP/1.1" 304 - "http://localhost:3000/learning/topics/z3-start/test-module/subtopics/test-lession-for-testing-purpose" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/149.0.0.0 Safari/537.36"
+[INFO] [AUTH] Authorization header received: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJjb2...
+[INFO] [AUTH] Token extracted. Length: 224
+[INFO] [AUTH] SUCCESS via PocketBase authRefresh - User ID: vhjcsdc36gb3ybo, Email: admin@zahniboerse.com, Admin: true
+::ffff:127.0.0.1 - - [10/Jun/2026:20:20:58 +0000] "GET /learning/lessons/c1gcog5wqdytb8b HTTP/1.1" 200 4161 "http://localhost:3000/learning/topics/z3-start/test-module/subtopics/test-lession-for-testing-purpose" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/149.0.0.0 Safari/537.36"
+::ffff:127.0.0.1 - - [10/Jun/2026:20:20:58 +0000] "GET /learning/lessons/c1gcog5wqdytb8b/assets/pdf?token=eyJsZXNzb25JZCI6ImMxZ2NvZzV3cWR5dGI4YiIsImFzc2V0VHlwZSI6InBkZiIsImF0dGFjaG1lbnRJbmRleCI6bnVsbCwiYWNjZXNzTGV2ZWwiOiJmdWxsIiwicGFja2FnZUlkIjoiYjVjbjNlaG1rc3F2ZXhwIiwidXNlcklkIjoidmhqY3NkYzM2Z2IzeWJvIiwiYWNjZXNzUm9sZSI6ImFkbWluIiwiZXhwaXJlc0F0IjoxNzgxMTIzNzU4ODgzfQ.7V6vPEzZzM-RLk7KB3JxrT8C0LxrsXA3qpjG1Lv8WNM HTTP/1.1" 200 3940 "http://localhost:3000/" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/149.0.0.0 Safari/537.36"
+[INFO] [AUTH] Authorization header received: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJjb2...
+[INFO] [AUTH] Token extracted. Length: 224
+[INFO] [AUTH] Authorization header received: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJjb2...
+[INFO] [AUTH] Token extracted. Length: 224
+[INFO] [AUTH] Authorization header received: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJjb2...
+[INFO] [AUTH] Token extracted. Length: 224
+[INFO] [AUTH] Authorization header received: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJjb2...
+[INFO] [AUTH] Token extracted. Length: 224
+[INFO] [AUTH] SUCCESS via PocketBase authRefresh - User ID: vhjcsdc36gb3ybo, Email: admin@zahniboerse.com, Admin: true
+[INFO] [AUTH] SUCCESS via PocketBase authRefresh - User ID: vhjcsdc36gb3ybo, Email: admin@zahniboerse.com, Admin: true
+[INFO] [AUTH] Authenticated user proceeding - ID: vhjcsdc36gb3ybo
+[INFO] [AUTH] SUCCESS via PocketBase authRefresh - User ID: vhjcsdc36gb3ybo, Email: admin@zahniboerse.com, Admin: true
+[INFO] [AUTH] SUCCESS via PocketBase authRefresh - User ID: vhjcsdc36gb3ybo, Email: admin@zahniboerse.com, Admin: true
+::ffff:127.0.0.1 - - [10/Jun/2026:20:20:59 +0000] "GET /favorites?perPage=100 HTTP/1.1" 200 75 "http://localhost:3000/learning/topics/z3-start/test-module/subtopics/test-lesson-for-testing-purpose" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/149.0.0.0 Safari/537.36"
+::ffff:127.0.0.1 - - [10/Jun/2026:20:20:59 +0000] "GET /settings/fees HTTP/1.1" 200 93 "http://localhost:3000/learning/topics/z3-start/test-module/subtopics/test-lesson-for-testing-purpose" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/149.0.0.0 Safari/537.36"
+::ffff:127.0.0.1 - - [10/Jun/2026:20:20:59 +0000] "GET /settings/shop-visibility HTTP/1.1" 200 22 "http://localhost:3000/learning/topics/z3-start/test-module/subtopics/test-lesson-for-testing-purpose" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/149.0.0.0 Safari/537.36"
+::ffff:127.0.0.1 - - [10/Jun/2026:20:20:59 +0000] "GET /learning/packages/z3-start HTTP/1.1" 200 9730 "http://localhost:3000/learning/topics/z3-start/test-module/subtopics/test-lesson-for-testing-purpose" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/149.0.0.0 Safari/537.36"
+[INFO] [AUTH] Authorization header received: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJjb2...
+[INFO] [AUTH] Token extracted. Length: 224
+[INFO] [AUTH] Authorization header received: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJjb2...
+[INFO] [AUTH] Token extracted. Length: 224
+[INFO] [AUTH] SUCCESS via PocketBase authRefresh - User ID: vhjcsdc36gb3ybo, Email: admin@zahniboerse.com, Admin: true
+[INFO] [AUTH] SUCCESS via PocketBase authRefresh - User ID: vhjcsdc36gb3ybo, Email: admin@zahniboerse.com, Admin: true
+::ffff:127.0.0.1 - - [10/Jun/2026:20:21:02 +0000] "GET /settings/fees HTTP/1.1" 304 - "http://localhost:3000/learning/topics/z3-start/test-module/subtopics/test-lession-for-testing-purpose" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/149.0.0.0 Safari/537.36"
+::ffff:127.0.0.1 - - [10/Jun/2026:20:21:02 +0000] "GET /settings/shop-visibility HTTP/1.1" 304 - "http://localhost:3000/learning/topics/z3-start/test-module/subtopics/test-lession-for-testing-purpose" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/149.0.0.0 Safari/537.36"
+[INFO] [AUTH] Authorization header received: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJjb2...
+[INFO] [AUTH] Token extracted. Length: 224
+[INFO] [AUTH] Authorization header received: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJjb2...
+[INFO] [AUTH] Token extracted. Length: 224
+[INFO] [AUTH] SUCCESS via PocketBase authRefresh - User ID: vhjcsdc36gb3ybo, Email: admin@zahniboerse.com, Admin: true
+[INFO] [AUTH] SUCCESS via PocketBase authRefresh - User ID: vhjcsdc36gb3ybo, Email: admin@zahniboerse.com, Admin: true
+::ffff:127.0.0.1 - - [10/Jun/2026:20:21:32 +0000] "GET /settings/shop-visibility HTTP/1.1" 304 - "http://localhost:3000/learning/topics/z3-start/test-module/subtopics/test-lession-for-testing-purpose" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/149.0.0.0 Safari/537.36"
+::ffff:127.0.0.1 - - [10/Jun/2026:20:21:32 +0000] "GET /settings/fees HTTP/1.1" 304 - "http://localhost:3000/learning/topics/z3-start/test-module/subtopics/test-lession-for-testing-purpose" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/149.0.0.0 Safari/537.36"

@@ -5,6 +5,23 @@ import { useAuth } from './AuthContext.jsx';
 
 const CartContext = createContext();
 
+const getShopStockLimit = (product) => {
+  const rawStock = Number(product?.stock_quantity ?? product?.stockQuantity ?? product?.stock ?? 1);
+  return Math.max(1, Number.isFinite(rawStock) ? Math.floor(rawStock) : 1);
+};
+
+const normalizeCartQuantity = (item) => {
+  if (item?.product_type !== 'shop') {
+    return { ...item, quantity: 1 };
+  }
+
+  const quantity = Math.max(1, Math.floor(Number(item.quantity || 1)));
+  return {
+    ...item,
+    quantity: Math.min(quantity, getShopStockLimit(item.product)),
+  };
+};
+
 export const useCart = () => {
   const context = useContext(CartContext);
   if (!context) {
@@ -58,7 +75,7 @@ export const CartProvider = ({ children }) => {
       try {
         const parsedCart = JSON.parse(savedCart);
         setCartItems(Array.isArray(parsedCart)
-          ? parsedCart.map(item => item.product_type === 'shop' ? item : { ...item, quantity: 1 })
+          ? parsedCart.map(normalizeCartQuantity)
           : []);
       } catch (e) {
         console.error('Failed to parse cart from localStorage', e);
@@ -94,7 +111,7 @@ export const CartProvider = ({ children }) => {
 
       const validItems = itemsWithProducts
         .filter(item => item !== null)
-        .map(item => item.product_type === 'shop' ? item : { ...item, quantity: 1 });
+        .map(normalizeCartQuantity);
       setCartItems(validItems);
     } catch (error) {
       console.error('Failed to load cart from DB:', error);
@@ -117,7 +134,11 @@ export const CartProvider = ({ children }) => {
 
   const addToCart = async (product, quantity = 1, productType = 'marketplace') => {
     const normalizedProductType = productType === 'shop' ? 'shop' : 'marketplace';
-    const normalizedQuantity = normalizedProductType === 'shop' ? quantity : 1;
+    const stockLimit = normalizedProductType === 'shop' ? getShopStockLimit(product) : 1;
+    const requestedQuantity = Math.max(1, Math.floor(Number(quantity || 1)));
+    const normalizedQuantity = normalizedProductType === 'shop'
+      ? Math.min(requestedQuantity, stockLimit)
+      : 1;
     const existingIndex = cartItems.findIndex(
       item => item.product_id === product.id && item.product_type === normalizedProductType
     );
@@ -125,7 +146,7 @@ export const CartProvider = ({ children }) => {
     let newCart = [...cartItems];
     if (existingIndex >= 0) {
       newCart[existingIndex].quantity = normalizedProductType === 'shop'
-        ? newCart[existingIndex].quantity + normalizedQuantity
+        ? Math.min(Number(newCart[existingIndex].quantity || 1) + normalizedQuantity, stockLimit)
         : 1;
     } else {
       newCart.push({
@@ -148,7 +169,7 @@ export const CartProvider = ({ children }) => {
         if (existingDbItem) {
           await pb.collection('cart_items').update(existingDbItem.id, {
             quantity: normalizedProductType === 'shop'
-              ? existingDbItem.quantity + normalizedQuantity
+              ? Math.min(Number(existingDbItem.quantity || 1) + normalizedQuantity, stockLimit)
               : 1
           }, { $autoCancel: false });
         } else {
@@ -180,7 +201,10 @@ export const CartProvider = ({ children }) => {
 
   const updateQuantity = async (cartItemId, productId, quantity) => {
     const currentItem = cartItems.find(item => item.id === cartItemId || item.product_id === productId);
-    const nextQuantity = currentItem?.product_type === 'shop' ? quantity : 1;
+    const stockLimit = currentItem?.product_type === 'shop' ? getShopStockLimit(currentItem.product) : 1;
+    const nextQuantity = currentItem?.product_type === 'shop'
+      ? Math.min(Math.max(1, Math.floor(Number(quantity || 1))), stockLimit)
+      : 1;
 
     if (quantity < 1) {
       await removeFromCart(cartItemId, productId);

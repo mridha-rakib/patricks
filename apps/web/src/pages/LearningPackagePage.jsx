@@ -70,9 +70,15 @@ const LearningPackagePage = () => {
   const activePrice = activeBillingOption?.priceAmount || packageData?.priceAmount || 0;
   const activeInterval = activeBillingOption?.interval || billingCycle;
   const checkoutEnabled = packageData?.checkoutEnabled !== false;
-  const managedSubscription = dashboard?.subscription && packageData?.id && dashboard.subscription.packageId === packageData.id
-    ? dashboard.subscription
-    : null;
+  const hasAccessiblePackage = Boolean(
+    dashboard?.hasAccess
+    && packageData?.id
+    && (
+      dashboard.subscription?.packageId === packageData.id
+      || dashboard.accessiblePackages?.some((item) => item.id === packageData.id)
+    ),
+  );
+  const managedSubscription = dashboard?.subscription && hasAccessiblePackage ? dashboard.subscription : null;
   const hasManagedSubscription = Boolean(managedSubscription);
   const managedSubscriptionStatus = managedSubscription?.status || '';
   const hasManagedAccess = Boolean(managedSubscription?.hasAccess);

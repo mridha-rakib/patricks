@@ -157,6 +157,8 @@ test.describe('learning free coupon checkout', () => {
     await expect(checkoutSummary.getByText('No payment details are required for this coupon code.')).toBeVisible();
     await expect(page.getByText('€0.00').first()).toBeVisible();
 
+    await checkoutSummary.getByLabel(/I accept the Terms/).check();
+    await checkoutSummary.getByLabel(/I accept the Privacy Policy/).check();
     await page.getByRole('button', { name: /Complete free subscription/ }).click();
 
     await expect(page).toHaveURL(/\/learning\/dashboard\?payment=free-coupon/);
@@ -170,6 +172,9 @@ test.describe('learning free coupon checkout', () => {
       packageSlug: 'z3-start',
       billingCycle: 'month',
       couponCode: 'FREE100',
+      acceptedTerms: true,
+      acceptedPrivacy: true,
+      newsletterOptIn: false,
     }]);
   });
 });

@@ -9,6 +9,7 @@ import logger from '../utils/logger.js';
 import { requireAuth, admin } from '../middleware/index.js';
 import {
   canAccessZ3Tier,
+  getZ3TierFeatureAccess,
   getZ3TierRank,
   isLearningTierCheckoutEnabled,
   normalizeZ3TierSlug,
@@ -44,6 +45,7 @@ const LEARNING_MEDIA_MIME_TYPES = new Set([
 ]);
 const LEARNING_MEDIA_MAX_BYTES = 100 * 1024 * 1024;
 const LEARNING_ASSET_TOKEN_TTL_SECONDS = Math.max(60, Number(process.env.LEARNING_ASSET_TOKEN_TTL_SECONDS || 900));
+const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const LEARNING_ASSET_TOKEN_SECRET = String(
   process.env.LEARNING_ASSET_TOKEN_SECRET
   || process.env.JWT_SECRET
@@ -65,6 +67,13 @@ const safeJson = (value, fallback = []) => {
   } catch {
     return fallback;
   }
+};
+
+const parseBooleanInput = (value) => {
+  if (value === true) return true;
+  if (value === false || value === undefined || value === null) return false;
+
+  return ['true', '1', 'yes', 'on'].includes(String(value).trim().toLowerCase());
 };
 
 const LEARNING_RICH_TEXT_SIZES = new Set(['small', 'normal', 'large', 'heading']);
@@ -1754,8 +1763,15 @@ const buildLearningFeatureAccess = async ({ auth, subscriptionRecord }) => {
   if (isAdminAuth(auth)) {
     return {
       content: true,
+      learningContent: true,
       learningPlan: true,
+      dailyWeeklyTasks: true,
+      progress: true,
       examTrainer: true,
+      questionPool: true,
+      trainingMode: true,
+      examMode: true,
+      analysis: true,
       userTierSlug: 'admin',
       userTierRank: Number.POSITIVE_INFINITY,
     };
@@ -1764,17 +1780,10 @@ const buildLearningFeatureAccess = async ({ auth, subscriptionRecord }) => {
   const context = await getSubscriptionTierContext(subscriptionRecord);
   const hasAccess = Boolean(context?.hasAccess);
   const userTierSlug = context?.tierSlug || '';
+  const featureAccess = getZ3TierFeatureAccess({ userTierSlug, hasAccess });
 
   return {
-    content: hasAccess,
-    learningPlan: hasAccess && canAccessZ3Tier({
-      userTierSlug,
-      requiredTierSlug: Z3_LEARNING_TIERS.STRUKTUR,
-    }),
-    examTrainer: hasAccess && canAccessZ3Tier({
-      userTierSlug,
-      requiredTierSlug: Z3_LEARNING_TIERS.PRUEFUNGSTRAINER,
-    }),
+    ...featureAccess,
     userTierSlug,
     userTierRank: context?.tierRank || 0,
   };
@@ -2021,6 +2030,8 @@ const canUseLearningPlan = async ({ auth, subscriptionRecord }) => {
     }),
   );
 };
+
+const canUseLearningProgress = canUseLearningPlan;
 
 const PLAN_CLOSED_ASSIGNMENT_STATUSES = new Set(['completed', 'skipped']);
 
@@ -2980,6 +2991,8 @@ const createFreeLearningSubscriptionFromCoupon = async ({
   couponPreview,
   billingCycle,
   existingPackageSubscription = null,
+  legalAcceptedAt = '',
+  newsletterOptIn = false,
 }) => {
   const now = new Date().toISOString();
   const accessEndsAt = getFreeCouponAccessEnd({ couponRecord, billingCycle, startIso: now });
@@ -3041,6 +3054,10 @@ const createFreeLearningSubscriptionFromCoupon = async ({
       discountAmount: couponPreview.discountAmount,
       finalAmount: couponPreview.finalAmount,
       accessEndsAt,
+      acceptedTerms: Boolean(legalAcceptedAt),
+      acceptedPrivacy: Boolean(legalAcceptedAt),
+      legalAcceptedAt,
+      newsletterOptIn: Boolean(newsletterOptIn),
     },
   });
 
@@ -3112,6 +3129,41 @@ const ensureStripeCouponForLearningCoupon = async (couponRecord) => {
   });
 
   return stripeCoupon.id;
+};
+
+const persistLearningNewsletterOptIn = async ({ email, checkoutSessionId = '' }) => {
+  const normalizedEmail = String(email || '').trim().toLowerCase();
+  if (!normalizedEmail || !EMAIL_REGEX.test(normalizedEmail)) {
+    return;
+  }
+
+  try {
+    const existing = await pb.collection('newsletter_signups').getList(1, 1, {
+      filter: `email="${escapePbString(normalizedEmail)}"`,
+      $autoCancel: false,
+    });
+
+    if (existing.items?.length > 0) {
+      const record = existing.items[0];
+      await pb.collection('newsletter_signups').update(record.id, {
+        status: 'active',
+        source: record.source || 'learning_checkout',
+        checkout_session_id: record.checkout_session_id || checkoutSessionId || '',
+      }, { $autoCancel: false });
+      return;
+    }
+
+    await pb.collection('newsletter_signups').create({
+      email: normalizedEmail,
+      subscribed_at: new Date().toISOString(),
+      status: 'active',
+      source: 'learning_checkout',
+      checkout_session_id: checkoutSessionId || '',
+      payment_intent_id: '',
+    }, { $autoCancel: false });
+  } catch (error) {
+    logger.warn(`[LEARNING] Newsletter opt-in could not be persisted for ${normalizedEmail}: ${error.message}`);
+  }
 };
 
 const buildLearningCouponPayload = (body, { partial = false } = {}) => {
@@ -3558,6 +3610,7 @@ router.get('/dashboard', requireAuth, async (req, res) => {
       ? serializeSubscription(subscriptionRecord)
       : null;
   const featureAccess = await buildLearningFeatureAccess({ auth: req.auth, subscriptionRecord });
+  const canTrackLearningProgress = featureAccess.progress === true;
 
   if (!isAdminViewer && (!subscriptionRecord || !subscription?.packageId)) {
     return res.json({
@@ -3630,11 +3683,13 @@ router.get('/dashboard', requireAuth, async (req, res) => {
   const progressPackageFilter = accessiblePackageIds.length > 0
     ? ` && (${accessiblePackageIds.map((packageId) => `package_id="${escapePbString(packageId)}"`).join(' || ')})`
     : ` && package_id="${escapePbString(packageRecord.id)}"`;
-  const progressRecords = await pb.collection('learning_progress').getFullList({
-    filter: `user_id="${escapePbString(req.auth.id)}"${progressPackageFilter}`,
-    sort: '-last_opened_at,-updated',
-    $autoCancel: false,
-  }).catch(() => []);
+  const progressRecords = canTrackLearningProgress
+    ? await pb.collection('learning_progress').getFullList({
+      filter: `user_id="${escapePbString(req.auth.id)}"${progressPackageFilter}`,
+      sort: '-last_opened_at,-updated',
+      $autoCancel: false,
+    }).catch(() => [])
+    : [];
 
   const progressByLessonId = new Map(
     progressRecords.map((record) => [record.lesson_id, {
@@ -3743,6 +3798,10 @@ router.post('/checkout', requireAuth, async (req, res) => {
   const slug = String(req.body?.packageSlug || '').trim();
   const billingCycle = String(req.body?.billingCycle || 'month').trim().toLowerCase() === 'year' ? 'year' : 'month';
   const couponCode = String(req.body?.couponCode || '').trim().toUpperCase();
+  const acceptedTerms = parseBooleanInput(req.body?.acceptedTerms ?? req.body?.accepted_terms);
+  const acceptedPrivacy = parseBooleanInput(req.body?.acceptedPrivacy ?? req.body?.accepted_privacy);
+  const newsletterOptIn = parseBooleanInput(req.body?.newsletterOptIn ?? req.body?.newsletter_opt_in);
+  const legalAcceptedAt = new Date().toISOString();
   const packageRecord = slug
     ? await getPackageRecordBySlug(slug).catch(() => null)
     : await getActiveLearningPackageRecord().catch(() => null);
@@ -3756,6 +3815,17 @@ router.post('/checkout', requireAuth, async (req, res) => {
       error: 'Learning package checkout is disabled',
       packageSlug: packageRecord.slug,
       tierSlug: normalizeZ3TierSlug(packageRecord.slug),
+    });
+  }
+
+  if (!acceptedTerms || !acceptedPrivacy) {
+    return res.status(400).json({
+      code: 'LEGAL_ACCEPTANCE_REQUIRED',
+      error: 'Terms and privacy acceptance are required before checkout',
+      required: {
+        acceptedTerms: true,
+        acceptedPrivacy: true,
+      },
     });
   }
 
@@ -3773,13 +3843,6 @@ router.post('/checkout', requireAuth, async (req, res) => {
     });
   }
 
-  const existingCustomerId = String(existingPackageSubscription?.stripe_customer_id || '').trim()
-    || await findStripeCustomerIdForUser(req.auth.id);
-  const stripeCustomerId = await ensureStripeCustomer({
-    user,
-    existingCustomerId,
-  });
-  const stripePriceId = await ensureStripePriceForPackage(packageRecord, billingCycle);
   const couponRecord = await validateLearningCouponForCheckout({ code: couponCode, packageRecord });
   const couponPreview = couponRecord
     ? calculateLearningCouponCheckoutPreview({ couponRecord, packageRecord, billingCycle })
@@ -3793,7 +3856,13 @@ router.post('/checkout', requireAuth, async (req, res) => {
       couponPreview,
       billingCycle,
       existingPackageSubscription,
+      legalAcceptedAt,
+      newsletterOptIn,
     });
+
+    if (newsletterOptIn) {
+      await persistLearningNewsletterOptIn({ email: user.email });
+    }
 
     logger.info(`[LEARNING] Activated free coupon subscription for user ${req.auth.id}, package ${packageRecord.slug}, coupon ${couponRecord.code}`);
 
@@ -3809,6 +3878,13 @@ router.post('/checkout', requireAuth, async (req, res) => {
     });
   }
 
+  const existingCustomerId = String(existingPackageSubscription?.stripe_customer_id || '').trim()
+    || await findStripeCustomerIdForUser(req.auth.id);
+  const stripeCustomerId = await ensureStripeCustomer({
+    user,
+    existingCustomerId,
+  });
+  const stripePriceId = await ensureStripePriceForPackage(packageRecord, billingCycle);
   const stripeCouponId = couponRecord ? await ensureStripeCouponForLearningCoupon(couponRecord) : '';
   const z3Tier = normalizeZ3TierSlug(packageRecord.slug);
   const checkoutMetadata = {
@@ -3822,6 +3898,10 @@ router.post('/checkout', requireAuth, async (req, res) => {
     learning_coupon_id: couponRecord?.id || '',
     coupon_code: couponRecord?.code || '',
     stripe_coupon_id: stripeCouponId,
+    accepted_terms: 'true',
+    accepted_privacy: 'true',
+    legal_accepted_at: legalAcceptedAt,
+    newsletter_opt_in: newsletterOptIn ? 'true' : 'false',
   };
 
   const session = await stripe.checkout.sessions.create({
@@ -3864,13 +3944,23 @@ const sendLearningModuleResponse = async (req, res, moduleRecord) => {
     return res.status(404).json({ error: 'Learning module not found' });
   }
 
-  const fullAccess = isAdminAuth(req.auth)
-    ? true
-    : await requireSubscriptionAccess(req.auth, moduleRecord.package_id).then(() => true).catch(() => false);
+  const isAdminViewer = isAdminAuth(req.auth);
+  let accessSubscriptionRecord = null;
+  let fullAccess = isAdminViewer;
+  if (!isAdminViewer) {
+    accessSubscriptionRecord = await requireSubscriptionAccess(req.auth, moduleRecord.package_id)
+      .then((subscriptionRecord) => subscriptionRecord)
+      .catch(() => null);
+    fullAccess = Boolean(accessSubscriptionRecord);
+  }
+  const progressAccess = isAdminViewer || await canUseLearningProgress({
+    auth: req.auth,
+    subscriptionRecord: accessSubscriptionRecord,
+  });
   const hasPreviewAccess = currentModule.isPreview || currentModule.lessons.some((lesson) => lesson.isPreview);
-  const previewOnly = !fullAccess && !isAdminAuth(req.auth) && hasPreviewAccess;
+  const previewOnly = !fullAccess && !isAdminViewer && hasPreviewAccess;
 
-  if (!fullAccess && !isAdminAuth(req.auth) && !hasPreviewAccess) {
+  if (!fullAccess && !isAdminViewer && !hasPreviewAccess) {
     const subscriptionRecord = req.auth?.id
       ? await getLearningSubscriptionForPackage({ userId: req.auth.id, packageId: moduleRecord.package_id })
       : null;
@@ -3891,7 +3981,7 @@ const sendLearningModuleResponse = async (req, res, moduleRecord) => {
       : null;
     const lessonPreviewAccess = currentModule.isPreview || lesson.isPreview;
     const unlocked = fullAccess
-      || isAdminAuth(req.auth)
+      || isAdminViewer
       || lessonPreviewAccess
       || index === 0
       || progress.status === 'completed'
@@ -3908,9 +3998,9 @@ const sendLearningModuleResponse = async (req, res, moduleRecord) => {
   res.json({
     viewer: {
       isAuthenticated: Boolean(req.auth?.id),
-      isAdmin: isAdminAuth(req.auth),
-      hasFullAccess: fullAccess || isAdminAuth(req.auth),
-      canSaveProgress: Boolean(req.auth?.id) && (fullAccess || isAdminAuth(req.auth)),
+      isAdmin: isAdminViewer,
+      hasFullAccess: fullAccess || isAdminViewer,
+      canSaveProgress: Boolean(req.auth?.id) && progressAccess,
       isPreviewOnly: previewOnly,
     },
     package: packageRecord ? serializePackage(packageRecord, {
@@ -3954,13 +4044,23 @@ const sendLearningLessonResponse = async (req, res, lessonRecord) => {
   const modules = await getModuleTreeForPackage(lessonRecord.package_id);
   const progressMap = await getProgressMap({ userId: req.auth?.id, packageId: lessonRecord.package_id });
   const currentModule = modules.find((item) => item.id === lessonRecord.module_id) || null;
-  const fullAccess = isAdminAuth(req.auth)
-    ? true
-    : await requireSubscriptionAccess(req.auth, lessonRecord.package_id).then(() => true).catch(() => false);
+  const isAdminViewer = isAdminAuth(req.auth);
+  let accessSubscriptionRecord = null;
+  let fullAccess = isAdminViewer;
+  if (!isAdminViewer) {
+    accessSubscriptionRecord = await requireSubscriptionAccess(req.auth, lessonRecord.package_id)
+      .then((subscriptionRecord) => subscriptionRecord)
+      .catch(() => null);
+    fullAccess = Boolean(accessSubscriptionRecord);
+  }
+  const progressAccess = isAdminViewer || await canUseLearningProgress({
+    auth: req.auth,
+    subscriptionRecord: accessSubscriptionRecord,
+  });
   const previewAccess = hasPreviewAccessToLesson({ lessonRecord, moduleRecord: currentModule });
-  const previewOnly = !fullAccess && !isAdminAuth(req.auth) && previewAccess;
+  const previewOnly = !fullAccess && !isAdminViewer && previewAccess;
 
-  if (!fullAccess && !isAdminAuth(req.auth) && !previewAccess) {
+  if (!fullAccess && !isAdminViewer && !previewAccess) {
     const subscriptionRecord = req.auth?.id
       ? await getLearningSubscriptionForPackage({ userId: req.auth.id, packageId: lessonRecord.package_id })
       : null;
@@ -3985,7 +4085,6 @@ const sendLearningLessonResponse = async (req, res, lessonRecord) => {
 
   const currentLesson = flatLessons[lessonIndex];
   const progress = progressMap.get(currentLesson.id) || buildDefaultLessonProgress();
-  const isAdminViewer = isAdminAuth(req.auth);
   const protectedAssets = buildProtectedLessonAssets({
     record: lessonRecord,
     hasEntitledAccess: fullAccess || isAdminViewer,
@@ -3996,9 +4095,9 @@ const sendLearningLessonResponse = async (req, res, lessonRecord) => {
   res.json({
     viewer: {
       isAuthenticated: Boolean(req.auth?.id),
-      isAdmin: isAdminAuth(req.auth),
-      hasFullAccess: fullAccess || isAdminAuth(req.auth),
-      canSaveProgress: Boolean(req.auth?.id) && (fullAccess || isAdminAuth(req.auth)),
+      isAdmin: isAdminViewer,
+      hasFullAccess: fullAccess || isAdminViewer,
+      canSaveProgress: Boolean(req.auth?.id) && progressAccess,
       isPreviewOnly: previewOnly,
     },
     package: packageRecord ? serializePackage(packageRecord, {
@@ -4141,6 +4240,7 @@ router.post('/lessons/:lessonId/progress', requireAuth, async (req, res) => {
   }
 
   await requireSubscriptionAccess(req.auth, lessonRecord.package_id);
+  await requireLearningTier(req.auth, Z3_LEARNING_TIERS.STRUKTUR);
 
   const normalizedStatus = LEARNING_PROGRESS_STATUSES.includes(req.body?.status)
     ? req.body.status

@@ -94,9 +94,9 @@ const syncCheckoutNewsletterOptIn = async ({ metadata = {}, paymentIntentId = ''
     return;
   }
 
-  const email = String(metadata.buyer_email || '').trim().toLowerCase();
+  const email = String(metadata.buyer_email || metadata.user_email || '').trim().toLowerCase();
   if (!email || !EMAIL_REGEX.test(email)) {
-    logger.warn(`[WEBHOOK] Newsletter opt-in skipped because buyer email is invalid for PI ${paymentIntentId || 'unknown'}`);
+    logger.warn(`[WEBHOOK] Newsletter opt-in skipped because checkout email is invalid for PI ${paymentIntentId || 'unknown'}`);
     return;
   }
 
@@ -886,6 +886,11 @@ const processSessionByType = async ({ paymentIntentId, session, fallbackMetadata
       subscriptionId,
       checkoutSession: session,
       fallbackMetadata,
+    });
+    await syncCheckoutNewsletterOptIn({
+      metadata,
+      paymentIntentId,
+      checkoutSessionId: String(session?.id || '').trim(),
     });
     return;
   }

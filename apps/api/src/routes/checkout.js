@@ -4,6 +4,7 @@ import Stripe from 'stripe';
 import logger from '../utils/logger.js';
 import { getPlatformSettings } from '../utils/platformSettings.js';
 import { normalizeCountryCode } from '../utils/countryCodes.js';
+import pb from '../utils/pocketbaseClient.js';
 
 const router = express.Router();
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
@@ -159,6 +160,40 @@ const parseBooleanInput = (value) => {
   return ['true', '1', 'yes', 'on'].includes(normalized);
 };
 
+const validateShopCartItemStock = async (items) => {
+  for (const item of items) {
+    if (item.product_type !== 'shop') {
+      continue;
+    }
+
+    const product = await pb.collection('shop_products').getOne(item.product_id, { $autoCancel: false }).catch(() => null);
+
+    if (!product) {
+      return {
+        valid: false,
+        code: 'SHOP_PRODUCT_NOT_FOUND',
+        error: `Shop product ${item.product_id} is no longer available`,
+      };
+    }
+
+    const stockQuantity = Math.max(0, Number(product.stock_quantity || 0));
+    if (item.quantity > stockQuantity) {
+      return {
+        valid: false,
+        code: 'OUT_OF_STOCK',
+        error: `${product.name || item.product_name} has only ${stockQuantity} in stock`,
+        productId: item.product_id,
+        stockQuantity,
+      };
+    }
+
+    item.product_name = String(product.name || item.product_name).trim();
+    item.product_price = Number(product.price || item.product_price || 0);
+  }
+
+  return { valid: true };
+};
+
 // ============================================================================
 // STRIPE CHECKOUT SESSION CREATION
 // ============================================================================
@@ -298,6 +333,12 @@ router.post('/create-session', async (req, res) => {
       code: 'SHOP_DISABLED',
       error: 'The official shop is currently unavailable',
     });
+  }
+
+  const shopStockValidation = await validateShopCartItemStock(normalizedItems);
+  if (!shopStockValidation.valid) {
+    logger.warn(`[CHECKOUT] Shop stock validation failed - Code: ${shopStockValidation.code}, Buyer: ${buyerIdStr}`);
+    return res.status(400).json(shopStockValidation);
   }
 
   let subtotal = 0;

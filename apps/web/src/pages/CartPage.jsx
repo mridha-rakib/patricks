@@ -199,6 +199,9 @@ const CartPage = () => {
                 const lineTotal = unitPrice * quantity;
                 const productPath = getProductPath(item);
                 const isMarketplaceItem = item.product_type !== 'shop';
+                const stockLimit = isMarketplaceItem
+                  ? 1
+                  : Math.max(1, Math.floor(Number(product.stock_quantity ?? product.stockQuantity ?? product.stock ?? 1) || 1));
 
                 return (
                   <article
@@ -293,8 +296,9 @@ const CartPage = () => {
                               </span>
                               <button
                                 type="button"
-                                className="flex h-9 w-9 items-center justify-center rounded-[6px] text-[#666666] transition-colors hover:bg-white"
+                                className="flex h-9 w-9 items-center justify-center rounded-[6px] text-[#666666] transition-colors hover:bg-white disabled:cursor-not-allowed disabled:opacity-40"
                                 onClick={() => updateQuantity(item.id, item.product_id, quantity + 1)}
+                                disabled={quantity >= stockLimit}
                                 aria-label={t('cart.increase_quantity')}
                               >
                                 <Plus className="h-4 w-4" />

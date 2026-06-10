@@ -551,6 +551,9 @@ const Header = () => {
             ) : (
               cartItems.map((item) => {
                 const isMarketplaceItem = item.product_type !== 'shop';
+                const stockLimit = isMarketplaceItem
+                  ? 1
+                  : Math.max(1, Math.floor(Number(item.product?.stock_quantity ?? item.product?.stockQuantity ?? item.product?.stock ?? 1) || 1));
 
                 return (
                 <div key={item.id} className="flex gap-3 bg-gray-50 p-3 rounded-[8px]">
@@ -575,7 +578,11 @@ const Header = () => {
                             <Minus size={14} />
                           </button>
                           <span className="text-xs font-medium w-6 text-center">{item.quantity}</span>
-                          <button onClick={() => updateQuantity(item.id, item.product_id, item.quantity + 1)} className="p-1 text-gray-500">
+                          <button
+                            onClick={() => updateQuantity(item.id, item.product_id, item.quantity + 1)}
+                            disabled={item.quantity >= stockLimit}
+                            className="p-1 text-gray-500 disabled:opacity-50"
+                          >
                             <Plus size={14} />
                           </button>
                         </div>

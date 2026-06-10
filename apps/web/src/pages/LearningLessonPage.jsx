@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { Helmet } from 'react-helmet';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { ArrowLeft, ArrowRight, CheckCircle2, FileText, Image as ImageIcon, PlayCircle } from 'lucide-react';
@@ -28,12 +28,129 @@ import { useTranslation } from '@/contexts/TranslationContext.jsx';
 import pb from '@/lib/pocketbaseClient.js';
 import { toast } from 'sonner';
 
+let pdfJsLoadPromise = null;
+
+const loadPdfJs = async () => {
+  if (!pdfJsLoadPromise) {
+    pdfJsLoadPromise = import('pdfjs-dist').then((pdfjsLib) => {
+      pdfjsLib.GlobalWorkerOptions.workerSrc = new URL('pdfjs-dist/build/pdf.worker.min.mjs', import.meta.url).toString();
+      return pdfjsLib;
+    });
+  }
+
+  return pdfJsLoadPromise;
+};
+
 const getPreviewKindFromMime = (mimeType = '') => {
   const normalized = String(mimeType || '').toLowerCase();
   if (normalized.includes('pdf')) return 'pdf';
   if (normalized.startsWith('image/')) return 'image';
   if (normalized.startsWith('video/')) return 'video';
   return 'unknown';
+};
+
+const LearningPdfCanvasPreview = ({ fileData, label, t, className = '' }) => {
+  const containerRef = useRef(null);
+  const [renderState, setRenderState] = useState('loading');
+
+  useEffect(() => {
+    if (!fileData) return undefined;
+
+    let cancelled = false;
+    const renderTasks = [];
+    const container = containerRef.current;
+    if (!container) return undefined;
+
+    container.innerHTML = '';
+    setRenderState('loading');
+
+    const renderPdf = async () => {
+      try {
+        const pdfjsLib = await loadPdfJs();
+        const loadingTask = pdfjsLib.getDocument({
+          data: fileData,
+          disableAutoFetch: true,
+          disableStream: true,
+        });
+        const pdf = await loadingTask.promise;
+        if (cancelled) return;
+
+        const containerWidth = Math.max(320, container.clientWidth || 860);
+
+        for (let pageNumber = 1; pageNumber <= pdf.numPages; pageNumber += 1) {
+          if (cancelled) return;
+
+          const page = await pdf.getPage(pageNumber);
+          const baseViewport = page.getViewport({ scale: 1 });
+          const scale = Math.min(1.65, Math.max(0.72, (containerWidth - 40) / baseViewport.width));
+          const viewport = page.getViewport({ scale });
+          const pixelRatio = window.devicePixelRatio || 1;
+
+          const pageShell = document.createElement('div');
+          pageShell.className = 'mx-auto mb-5 max-w-full rounded-[8px] border border-black/10 bg-white p-3 shadow-sm';
+
+          const canvas = document.createElement('canvas');
+          canvas.width = Math.floor(viewport.width * pixelRatio);
+          canvas.height = Math.floor(viewport.height * pixelRatio);
+          canvas.style.width = `${Math.floor(viewport.width)}px`;
+          canvas.style.height = `${Math.floor(viewport.height)}px`;
+          canvas.className = 'mx-auto block max-w-full';
+          canvas.setAttribute('aria-label', `${label} page ${pageNumber}`);
+
+          const context = canvas.getContext('2d');
+          context.setTransform(pixelRatio, 0, 0, pixelRatio, 0, 0);
+
+          pageShell.appendChild(canvas);
+          container.appendChild(pageShell);
+
+          const renderTask = page.render({ canvasContext: context, viewport });
+          renderTasks.push(renderTask);
+          await renderTask.promise;
+        }
+
+        if (!cancelled) {
+          setRenderState('ready');
+        }
+      } catch (error) {
+        if (!cancelled) {
+          console.error('Failed to render learning PDF preview:', error);
+          setRenderState('error');
+        }
+      }
+    };
+
+    renderPdf();
+
+    return () => {
+      cancelled = true;
+      renderTasks.forEach((task) => task.cancel?.());
+      if (container) {
+        container.innerHTML = '';
+      }
+    };
+  }, [fileData, label]);
+
+  if (renderState === 'error') {
+    return (
+      <div className="rounded-[8px] border border-dashed border-black/15 bg-slate-50 p-5 text-sm text-slate-500">
+        {t('learning.preview_unavailable')}
+      </div>
+    );
+  }
+
+  return (
+    <div
+      className={`rounded-[8px] border border-black/10 bg-slate-100 p-3 ${className || 'max-h-[720px] overflow-y-auto'}`}
+      onContextMenu={(event) => event.preventDefault()}
+    >
+      {renderState === 'loading' && (
+        <div className="flex h-40 items-center justify-center text-sm text-slate-500">
+          {t('common.loading')}
+        </div>
+      )}
+      <div ref={containerRef} className={renderState === 'loading' ? 'hidden' : ''} />
+    </div>
+  );
 };
 
 const LearningAssetPreview = ({
@@ -44,12 +161,14 @@ const LearningAssetPreview = ({
   className = '',
 }) => {
   const [previewUrl, setPreviewUrl] = useState('');
+  const [previewData, setPreviewData] = useState(null);
   const [previewError, setPreviewError] = useState(false);
   const [resolvedKind, setResolvedKind] = useState(kind);
 
   useEffect(() => {
     if (!assetUrl) {
       setPreviewUrl('');
+      setPreviewData(null);
       setPreviewError(false);
       setResolvedKind(kind);
       return undefined;
@@ -61,6 +180,7 @@ const LearningAssetPreview = ({
     const loadPreview = async () => {
       setPreviewError(false);
       setPreviewUrl('');
+      setPreviewData(null);
       setResolvedKind(kind);
 
       try {
@@ -71,6 +191,15 @@ const LearningAssetPreview = ({
 
         const blob = await response.blob();
         const nextKind = kind === 'unknown' ? getPreviewKindFromMime(blob.type) : kind;
+        if (nextKind === 'pdf') {
+          const buffer = await blob.arrayBuffer();
+          if (active) {
+            setResolvedKind(nextKind);
+            setPreviewData(new Uint8Array(buffer));
+          }
+          return;
+        }
+
         objectUrl = URL.createObjectURL(blob);
         if (active) {
           setResolvedKind(nextKind);
@@ -104,7 +233,7 @@ const LearningAssetPreview = ({
     );
   }
 
-  if (!previewUrl) {
+  if (!previewUrl && !previewData) {
     return (
       <div className={`flex items-center justify-center rounded-[8px] border border-black/10 bg-slate-50 text-sm text-slate-500 ${className || 'h-40'}`}>
         {t('common.loading')}
@@ -114,10 +243,11 @@ const LearningAssetPreview = ({
 
   if (resolvedKind === 'pdf') {
     return (
-      <iframe
-        title={label}
-        src={`${previewUrl}#toolbar=0&navpanes=0`}
-        className={`w-full rounded-[8px] border border-black/10 bg-white ${className || 'h-[520px]'}`}
+      <LearningPdfCanvasPreview
+        fileData={previewData}
+        label={label}
+        t={t}
+        className={className}
       />
     );
   }
