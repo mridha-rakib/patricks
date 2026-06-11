@@ -1,10 +1,11 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { Helmet } from 'react-helmet';
-import { CheckCircle, ExternalLink, XCircle } from 'lucide-react';
+import { AlertCircle, CheckCircle, ExternalLink, XCircle } from 'lucide-react';
 import { toast } from 'sonner';
 import { Badge } from '@/components/ui/badge.jsx';
 import { Button } from '@/components/ui/button.jsx';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table.jsx';
+import AccountLayout from '@/components/AccountLayout.jsx';
 import { useTranslation } from '@/contexts/TranslationContext.jsx';
 import apiServerClient from '@/lib/apiServerClient.js';
 import pb from '@/lib/pocketbaseClient.js';
@@ -22,6 +23,17 @@ const ProductVerificationAdminPage = () => {
       currency: 'EUR',
     }).format(Number(price) || 0);
 
+  const formatDateTime = (value) => {
+    if (!value) return '-';
+    const date = new Date(value);
+    if (Number.isNaN(date.getTime())) return '-';
+
+    return new Intl.DateTimeFormat(language === 'EN' ? 'en-US' : 'de-DE', {
+      dateStyle: 'medium',
+      timeStyle: 'short',
+    }).format(date);
+  };
+
   const getConditionLabel = (condition) => {
     switch (condition) {
       case 'Neu':
@@ -35,6 +47,27 @@ const ProductVerificationAdminPage = () => {
       default:
         return condition || '-';
     }
+  };
+
+  const getCategoryLabel = (type) => {
+    switch (type) {
+      case 'Set':
+        return t('marketplace.type_set');
+      case 'Consumable':
+        return t('marketplace.type_consumable');
+      case 'Article':
+      default:
+        return t('marketplace.type_article');
+    }
+  };
+
+  const getStatusLabel = (product) => {
+    if (product.verification_status === 'pending') return t('admin_verifications.status_pending');
+    if (product.verification_status === 'pending_payment') return t('admin_verifications.status_pending_payment');
+    if (product.verification_status === 'needs_correction') return t('admin_verifications.status_needs_correction');
+    if (product.verification_status === 'rejected') return t('admin_verifications.status_rejected');
+    if (product.verification_status === 'approved') return t('admin_verifications.status_approved');
+    return product.status || product.verification_status || '-';
   };
 
   const getApiErrorMessage = useCallback(async (response, fallbackKey) => {
@@ -128,8 +161,41 @@ const ProductVerificationAdminPage = () => {
     }
   };
 
+  const handleRequestCorrection = async (product) => {
+    const reason = window.prompt(t('admin_verifications.correction_prompt'));
+    if (reason === null) return;
+
+    setProcessingId(product.id);
+    try {
+      const response = await apiServerClient.fetch('/admin/request-correction-product', {
+        method: 'POST',
+        headers: getAuthHeaders(),
+        body: JSON.stringify({
+          productId: product.id,
+          reason: reason || t('admin_verifications.default_correction_reason'),
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error(await getApiErrorMessage(response, 'admin_verifications.correction_error'));
+      }
+
+      toast.success(t('admin_verifications.correction_success'));
+      setPendingProducts((currentProducts) => currentProducts.filter((currentProduct) => currentProduct.id !== product.id));
+    } catch (error) {
+      console.error('Correction request error:', error);
+      toast.error(error.message || t('admin_verifications.correction_error'));
+    } finally {
+      setProcessingId(null);
+    }
+  };
+
   if (loading) {
-    return <div className="py-12 text-center text-muted-foreground">{t('admin_verifications.loading')}</div>;
+    return (
+      <AccountLayout activeKey="admin-verifications">
+        <div className="py-12 text-center text-muted-foreground">{t('admin_verifications.loading')}</div>
+      </AccountLayout>
+    );
   }
 
   return (
@@ -138,7 +204,8 @@ const ProductVerificationAdminPage = () => {
         <title>{t('admin_verifications.title')} - Zahnibörse</title>
       </Helmet>
 
-      <div className="space-y-6">
+      <AccountLayout activeKey="admin-verifications" contentClassName="max-w-none">
+        <div className="space-y-6">
         <div className="flex items-center justify-between gap-4">
           <div>
             <h2 className="text-2xl font-semibold tracking-tight">{t('admin_verifications.title')}</h2>
@@ -165,7 +232,10 @@ const ProductVerificationAdminPage = () => {
                   <TableHead className="w-[80px]">{t('admin_verifications.image')}</TableHead>
                   <TableHead>{t('admin_verifications.product')}</TableHead>
                   <TableHead>{t('admin_verifications.seller')}</TableHead>
+                  <TableHead>{t('admin_verifications.submitted')}</TableHead>
+                  <TableHead>{t('admin_verifications.category')}</TableHead>
                   <TableHead>{t('admin_verifications.condition')}</TableHead>
+                  <TableHead>{t('admin_verifications.status')}</TableHead>
                   <TableHead>{t('admin_verifications.price')}</TableHead>
                   <TableHead className="text-right">{t('admin_verifications.actions')}</TableHead>
                 </TableRow>
@@ -208,16 +278,27 @@ const ProductVerificationAdminPage = () => {
                         )}
                       </div>
                     </TableCell>
+                    <TableCell className="whitespace-nowrap text-sm text-muted-foreground">
+                      {formatDateTime(product.validation_requested_at || product.verification_requested_at || product.created)}
+                    </TableCell>
+                    <TableCell>
+                      <Badge variant="secondary">{getCategoryLabel(product.product_type)}</Badge>
+                    </TableCell>
                     <TableCell>
                       <Badge variant="outline" className="border-yellow-200 bg-yellow-50 text-yellow-800">
                         {getConditionLabel(product.condition)}
+                      </Badge>
+                    </TableCell>
+                    <TableCell>
+                      <Badge variant="outline" className="border-blue-200 bg-blue-50 text-blue-800">
+                        {getStatusLabel(product)}
                       </Badge>
                     </TableCell>
                     <TableCell className="font-medium">
                       {formatPrice(product.price)}
                     </TableCell>
                     <TableCell className="text-right">
-                      <div className="flex items-center justify-end gap-2">
+                      <div className="flex flex-wrap items-center justify-end gap-2">
                         <Button
                           variant="outline"
                           size="sm"
@@ -227,6 +308,16 @@ const ProductVerificationAdminPage = () => {
                         >
                           <CheckCircle className="mr-1 h-4 w-4" />
                           {processingId === product.id ? t('admin_verifications.processing') : t('admin_verifications.approve')}
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="border-amber-200 text-amber-700 hover:bg-amber-50 hover:text-amber-800"
+                          onClick={() => handleRequestCorrection(product)}
+                          disabled={processingId === product.id}
+                        >
+                          <AlertCircle className="mr-1 h-4 w-4" />
+                          {processingId === product.id ? t('admin_verifications.processing') : t('admin_verifications.request_correction')}
                         </Button>
                         <Button
                           variant="outline"
@@ -246,7 +337,8 @@ const ProductVerificationAdminPage = () => {
             </Table>
           </div>
         )}
-      </div>
+        </div>
+      </AccountLayout>
     </>
   );
 };

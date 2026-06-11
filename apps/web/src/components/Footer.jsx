@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { Facebook, Instagram, Twitter, Globe } from 'lucide-react';
 import { toast } from 'sonner';
@@ -6,6 +6,34 @@ import { useAuth } from '@/contexts/AuthContext.jsx';
 import { useTranslation } from '@/contexts/TranslationContext.jsx';
 import { subscribeToNewsletter } from '@/lib/newsletterApi.js';
 import Logo from './Logo.jsx';
+
+const defaultFooterContent = {
+  // Public footer content can be edited in public/footer-content.json.
+  // Keep empty arrays when a section should not show placeholder links.
+  socialLinks: [],
+  legalLinks: [
+    { labelKey: 'footer.impressum', href: '/impressum' },
+    { labelKey: 'footer.privacy', href: '/datenschutz' },
+    { labelKey: 'footer.terms', href: '/agb' },
+    { labelKey: 'footer.revocation', href: '/widerrufsbelehrung' },
+    { labelKey: 'footer.revocation_form', href: '/widerrufsformular' },
+  ],
+  supportLinks: [
+    { labelKey: 'footer.faq', href: '/faq' },
+    { labelKey: 'footer.contact', href: '/contact' },
+    { labelKey: 'footer.shipping', href: '/hilfe' },
+    { labelKey: 'footer.about', href: '/about' },
+  ],
+};
+
+const socialIcons = {
+  Instagram,
+  Facebook,
+  Twitter,
+};
+
+const resolveFooterLabel = (item, language, t) => item?.[`label${language}`] || item?.label || (item?.labelKey ? t(item.labelKey) : '');
+
 const Footer = () => {
   const location = useLocation();
   const {
@@ -18,6 +46,30 @@ const Footer = () => {
   } = useTranslation();
   const [email, setEmail] = useState('');
   const [loading, setLoading] = useState(false);
+  const [footerContent, setFooterContent] = useState(defaultFooterContent);
+
+  useEffect(() => {
+    let active = true;
+
+    fetch('/footer-content.json', { cache: 'no-store' })
+      .then((response) => (response.ok ? response.json() : null))
+      .then((data) => {
+        if (!active || !data || typeof data !== 'object') return;
+        setFooterContent({
+          socialLinks: Array.isArray(data.socialLinks) ? data.socialLinks : defaultFooterContent.socialLinks,
+          legalLinks: Array.isArray(data.legalLinks) ? data.legalLinks : defaultFooterContent.legalLinks,
+          supportLinks: Array.isArray(data.supportLinks) ? data.supportLinks : defaultFooterContent.supportLinks,
+        });
+      })
+      .catch(() => {
+        if (active) setFooterContent(defaultFooterContent);
+      });
+
+    return () => {
+      active = false;
+    };
+  }, []);
+
   if (location.pathname === '/auth') {
     return null;
   }
@@ -55,17 +107,18 @@ const Footer = () => {
             <p className="font-['Inter'] text-[14px] font-normal text-[#9ca3af] leading-[1.6] max-w-[288px] mb-[24px]">
               {t('brand.tagline')}
             </p>
-            <div className="flex items-center gap-[16px] mt-[8px]">
-              <a href="https://instagram.com" target="_blank" rel="noopener noreferrer" aria-label="Instagram" className="text-[#9ca3af] hover:text-[#0000FF] transition-all duration-150">
-                <Instagram size={20} />
-              </a>
-              <a href="https://facebook.com" target="_blank" rel="noopener noreferrer" aria-label="Facebook" className="text-[#9ca3af] hover:text-[#0000FF] transition-all duration-150">
-                <Facebook size={20} />
-              </a>
-              <a href="https://twitter.com" target="_blank" rel="noopener noreferrer" aria-label="Twitter" className="text-[#9ca3af] hover:text-[#0000FF] transition-all duration-150">
-                <Twitter size={20} />
-              </a>
-            </div>
+            {footerContent.socialLinks.length > 0 && (
+              <div className="flex items-center gap-[16px] mt-[8px]">
+                {footerContent.socialLinks.map((item) => {
+                  const Icon = socialIcons[item.label] || Globe;
+                  return (
+                    <a key={`${item.label}-${item.url}`} href={item.url} target="_blank" rel="noopener noreferrer" aria-label={item.label} className="text-[#9ca3af] hover:text-[#0000FF] transition-all duration-150">
+                      <Icon size={20} />
+                    </a>
+                  );
+                })}
+              </div>
+            )}
           </div>
 
           {/* Column 2: Rechtliches */}
@@ -74,11 +127,11 @@ const Footer = () => {
               {t('footer.legal')}
             </h3>
             <nav className="flex flex-col gap-[12px]">
-              <Link to="/impressum" className="font-['Inter'] text-[14px] text-[#9ca3af] hover:text-[#0000FF] transition-all duration-150">{t('footer.impressum')}</Link>
-              <Link to="/datenschutz" className="font-['Inter'] text-[14px] text-[#9ca3af] hover:text-[#0000FF] transition-all duration-150">{t('footer.privacy')}</Link>
-              <Link to="/agb" className="font-['Inter'] text-[14px] text-[#9ca3af] hover:text-[#0000FF] transition-all duration-150">{t('footer.terms')}</Link>
-              <Link to="/widerrufsbelehrung" className="font-['Inter'] text-[14px] text-[#9ca3af] hover:text-[#0000FF] transition-all duration-150">{t('footer.revocation')}</Link>
-              <Link to="/widerrufsformular" className="font-['Inter'] text-[14px] text-[#9ca3af] hover:text-[#0000FF] transition-all duration-150">{t('footer.revocation_form')}</Link>
+              {footerContent.legalLinks.map((item) => (
+                <Link key={`${item.href}-${item.labelKey || item.label}`} to={item.href} className="font-['Inter'] text-[14px] text-[#9ca3af] hover:text-[#0000FF] transition-all duration-150">
+                  {resolveFooterLabel(item, language, t)}
+                </Link>
+              ))}
             </nav>
           </div>
 
@@ -88,10 +141,11 @@ const Footer = () => {
               {t('footer.support')}
             </h3>
             <nav className="flex flex-col gap-[12px]">
-              <Link to="/faq" className="font-['Inter'] text-[14px] text-[#9ca3af] hover:text-[#0000FF] transition-all duration-150">{t('footer.faq')}</Link>
-              <Link to="/contact" className="font-['Inter'] text-[14px] text-[#9ca3af] hover:text-[#0000FF] transition-all duration-150">{t('footer.contact')}</Link>
-              <Link to="/hilfe" className="font-['Inter'] text-[14px] text-[#9ca3af] hover:text-[#0000FF] transition-all duration-150">{t('footer.shipping')}</Link>
-              <Link to="/about" className="font-['Inter'] text-[14px] text-[#9ca3af] hover:text-[#0000FF] transition-all duration-150">{t('footer.about')}</Link>
+              {footerContent.supportLinks.map((item) => (
+                <Link key={`${item.href}-${item.labelKey || item.label}`} to={item.href} className="font-['Inter'] text-[14px] text-[#9ca3af] hover:text-[#0000FF] transition-all duration-150">
+                  {resolveFooterLabel(item, language, t)}
+                </Link>
+              ))}
             </nav>
           </div>
 

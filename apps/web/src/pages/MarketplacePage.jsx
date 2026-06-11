@@ -132,7 +132,7 @@ const MarketplacePage = () => {
   return (
     <>
       <Helmet>
-        <title>{t('marketplace.title')} - Zahniboerse</title>
+        <title>{t('marketplace.title')} - Zahnibörse</title>
       </Helmet>
 
       <main className="flex-1 bg-[#f7f7f7] pb-16">
@@ -144,10 +144,10 @@ const MarketplacePage = () => {
             <div className="rounded-[20px] bg-white px-6 py-9 shadow-[0_12px_22px_rgba(15,23,42,0.15)] md:px-10 md:py-11">
               <div className="flex flex-col gap-7 md:flex-row md:items-center md:justify-between">
                 <div className="min-w-0 max-w-[760px]">
-                  <h1 className="font-serif text-[42px] font-bold leading-[1.05] text-[#333] md:text-[52px] lg:whitespace-nowrap">
+                  <h1 className="font-serif text-3xl font-bold leading-tight text-[#333] sm:text-[40px] md:text-[52px] lg:whitespace-nowrap">
                     {t('marketplace.title')}
                   </h1>
-                  <p className="mt-3 max-w-[560px] text-[20px] leading-[1.45] text-[#666]">
+                  <p className="mt-3 max-w-[560px] text-base leading-7 text-[#666] sm:text-[20px] sm:leading-[1.45]">
                     {t('marketplace.subtitle')}
                   </p>
                 </div>
@@ -155,7 +155,7 @@ const MarketplacePage = () => {
                 <Button
                   type="button"
                   onClick={handleSellClick}
-                  className="h-[52px] rounded-[8px] bg-[#0000FF] px-7 text-base font-semibold text-white shadow-none hover:bg-[#0000CC] md:mr-0"
+                  className="h-[52px] w-full rounded-[8px] bg-[#0000FF] px-7 text-base font-semibold text-white shadow-none hover:bg-[#0000CC] sm:w-auto md:mr-0"
                 >
                   {t('marketplace.sell_now')}
                 </Button>
@@ -267,37 +267,31 @@ const MarketplacePage = () => {
                     </div>
                   ) : (
                     <div className="overflow-hidden rounded-[12px] border border-[#ddd] bg-white">
-                      <div className="grid lg:grid-cols-[minmax(0,1fr)_360px]">
-                        <div className="p-7 md:p-10 lg:p-12">
-                          <h3 className="mt-5 max-w-xl text-3xl font-bold text-slate-900 md:text-4xl">
-                            {t('marketplace.empty_title')}
-                          </h3>
-                          <p className="mt-4 max-w-xl text-base leading-7 text-slate-600">
-                            {t('marketplace.empty_body')}
-                          </p>
+                      <div className="p-7 md:p-10 lg:p-12">
+                        <h3 className="mt-5 max-w-xl text-3xl font-bold text-slate-900 md:text-4xl">
+                          {t('marketplace.empty_title')}
+                        </h3>
+                        <p className="mt-4 max-w-xl text-base leading-7 text-slate-600">
+                          {t('marketplace.empty_body')}
+                        </p>
 
-                          <div className="mt-8 flex flex-wrap gap-3">
-                            <Button
-                              type="button"
-                              onClick={() => setFilters(getEmptyFilterValues(visibleFilterDefinitions))}
-                              className="h-11 rounded-full bg-[#0000FF] px-6 text-white shadow-none hover:bg-[#0000CC]"
-                            >
-                              {t('marketplace.reset_filters')}
-                            </Button>
+                        <div className="mt-8 flex flex-wrap gap-3">
+                          <Button
+                            type="button"
+                            onClick={() => setFilters(getEmptyFilterValues(visibleFilterDefinitions))}
+                            className="h-11 rounded-full bg-[#0000FF] px-6 text-white shadow-none hover:bg-[#0000CC]"
+                          >
+                            {t('marketplace.reset_filters')}
+                          </Button>
 
-                            <Button
-                              type="button"
-                              variant="outline"
-                              onClick={handleSellClick}
-                              className="h-11 rounded-full border-black/10 bg-white px-6 text-slate-700 shadow-none hover:bg-slate-50"
-                            >
-                              {t('marketplace.sell_now')}
-                            </Button>
-                          </div>
-                        </div>
-
-                        <div className="bg-[linear-gradient(180deg,#f7f7f7_0%,#ffffff_100%)] p-7 md:p-10 lg:p-12">
-                          <FilterSection filters={filters} filterDefinitions={visibleFilterDefinitions} onFiltersChange={setFilters} />
+                          <Button
+                            type="button"
+                            variant="outline"
+                            onClick={handleSellClick}
+                            className="h-11 rounded-full border-black/10 bg-white px-6 text-slate-700 shadow-none hover:bg-slate-50"
+                          >
+                            {t('marketplace.sell_now')}
+                          </Button>
                         </div>
                       </div>
                     </div>

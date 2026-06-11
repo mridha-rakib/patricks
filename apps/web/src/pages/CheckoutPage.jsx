@@ -193,7 +193,7 @@ const CheckoutPage = () => {
     return (
       <>
         <Helmet>
-          <title>{`${t('checkout.title')} - Zahniboerse`}</title>
+          <title>{`${t('checkout.title')} - Zahnibörse`}</title>
         </Helmet>
 
         <main className="flex-1 bg-[#f6f7f9] px-4 py-10 sm:px-6 md:py-14 lg:px-8">
@@ -224,7 +224,7 @@ const CheckoutPage = () => {
   return (
     <>
       <Helmet>
-        <title>{`${t('checkout.title')} - Zahniboerse`}</title>
+        <title>{`${t('checkout.title')} - Zahnibörse`}</title>
       </Helmet>
 
       <main className="flex-1 bg-[#f6f7f9] px-4 py-8 sm:px-6 md:py-12 lg:px-8">

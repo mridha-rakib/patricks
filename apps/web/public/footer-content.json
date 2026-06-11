@@ -1,0 +1,17 @@
+{
+  "_comment": "Edit public footer links here. Keep socialLinks empty until real social URLs are available; do not add placeholder/demo links.",
+  "socialLinks": [],
+  "legalLinks": [
+    { "labelKey": "footer.impressum", "href": "/impressum" },
+    { "labelKey": "footer.privacy", "href": "/datenschutz" },
+    { "labelKey": "footer.terms", "href": "/agb" },
+    { "labelKey": "footer.revocation", "href": "/widerrufsbelehrung" },
+    { "labelKey": "footer.revocation_form", "href": "/widerrufsformular" }
+  ],
+  "supportLinks": [
+    { "labelKey": "footer.faq", "href": "/faq" },
+    { "labelKey": "footer.contact", "href": "/contact" },
+    { "labelKey": "footer.shipping", "href": "/hilfe" },
+    { "labelKey": "footer.about", "href": "/about" }
+  ]
+}

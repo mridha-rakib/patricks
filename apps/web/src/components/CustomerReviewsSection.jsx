@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { ArrowRight } from 'lucide-react';
 import { useTranslation } from '@/contexts/TranslationContext.jsx';
@@ -11,33 +11,6 @@ const CustomerReviewsSection = () => {
   const { t } = useTranslation();
   const [apiReviews, setApiReviews] = useState([]);
   const [isLoadingReviews, setIsLoadingReviews] = useState(true);
-
-  const fallbackReviews = useMemo(() => ([
-    {
-      id: 1,
-      displayName: 'Laura M.',
-      rating: 5,
-      body: t('reviews.review_1'),
-      initials: 'L',
-      verifiedBuyer: true,
-    },
-    {
-      id: 2,
-      displayName: 'Dr. Schmidt',
-      rating: 5,
-      body: t('reviews.review_2'),
-      initials: 'S',
-      verifiedBuyer: true,
-    },
-    {
-      id: 3,
-      displayName: 'Julian K.',
-      rating: 4,
-      body: t('reviews.review_3'),
-      initials: 'J',
-      verifiedBuyer: true,
-    },
-  ]), [t]);
 
   useEffect(() => {
     let isMounted = true;
@@ -64,7 +37,7 @@ const CustomerReviewsSection = () => {
     };
   }, []);
 
-  const reviews = (isLoadingReviews ? fallbackReviews : apiReviews).slice(0, HOME_REVIEW_LIMIT);
+  const reviews = apiReviews.slice(0, HOME_REVIEW_LIMIT);
 
   if (!isLoadingReviews && reviews.length === 0) {
     return null;
@@ -92,16 +65,24 @@ const CustomerReviewsSection = () => {
         </div>
 
         {/* Reviews Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 md:gap-8">
-          {reviews.map((review) => (
-            <ReviewCard
-              key={review.id}
-              review={review}
-              verifiedLabel={t('reviews.verified_buyer')}
-              customerLabel={t('reviews.customer')}
-            />
-          ))}
-        </div>
+        {isLoadingReviews ? (
+          <div className="grid grid-cols-1 gap-6 md:grid-cols-2 md:gap-8 lg:grid-cols-3">
+            {[0, 1, 2].map((item) => (
+              <div key={item} className="h-56 animate-pulse rounded-[8px] border border-black/10 bg-slate-100" />
+            ))}
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 gap-6 md:grid-cols-2 md:gap-8 lg:grid-cols-3">
+            {reviews.map((review) => (
+              <ReviewCard
+                key={review.id}
+                review={review}
+                verifiedLabel={t('reviews.verified_buyer')}
+                customerLabel={t('reviews.customer')}
+              />
+            ))}
+          </div>
+        )}
 
       </div>
     </section>

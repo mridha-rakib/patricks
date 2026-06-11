@@ -61,6 +61,8 @@ const NewProductForm = () => {
   const [verificationQueue, setVerificationQueue] = useState([]);
   const [formData, setFormData] = useState(createEmptyFormData('Article'));
 
+  const isRepeatedVerificationFlow = verificationQueue.length > 0;
+
   const handleTypeSelect = (kind) => {
     const queuedKind = verificationKind || getProductVerificationKind(verificationQueue[0]?.productType);
     if (verificationQueue.length > 0 && queuedKind && kind !== queuedKind) {
@@ -68,7 +70,7 @@ const NewProductForm = () => {
       return;
     }
 
-    const productType = kind === 'consumable' ? 'Consumable' : 'Article';
+    const productType = kind === 'consumable' ? 'Consumable' : kind === 'set' ? 'Set' : 'Article';
     setSelectedListingKind(kind);
     setFormData(createEmptyFormData(productType));
     setStep(2);
@@ -175,12 +177,9 @@ const NewProductForm = () => {
       }
 
       if (!isAdmin) {
-        const status = needsVerification ? 'draft' : 'pending_verification';
+        const status = needsVerification ? 'draft' : 'active';
         data.append('status', status);
-        if (!needsVerification) {
-          data.append('verification_status', 'pending');
-          data.append('validation_requested_at', new Date().toISOString());
-        }
+        data.append('verification_status', needsVerification ? 'pending_payment' : 'not_required');
       }
 
       if (formData.images.length > 0) {
@@ -207,21 +206,7 @@ const NewProductForm = () => {
         toast.success(t('new_product.verification_added_success'));
         setStep(3);
       } else {
-        if (!isAdmin) {
-          const authToken = pb.authStore.token;
-          await fetch(`${window.location.origin}/hcgi/api/verification/request-validation`, {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              'Authorization': `Bearer ${authToken}`,
-            },
-            body: JSON.stringify({ productId: record.id }),
-          }).catch((validationError) => {
-            console.warn('Validation request audit failed:', validationError);
-          });
-        }
-
-        toast.success(isAdmin ? t('new_product.publish_success') : t('new_product.validation_pending_success'));
+        toast.success(isAdmin || !needsVerification ? t('new_product.publish_success') : t('new_product.validation_pending_success'));
         navigate(isAdmin ? '/shop' : '/seller-dashboard');
       }
     } catch (error) {
@@ -328,7 +313,7 @@ const NewProductForm = () => {
           </div>
 
           {step === 1 && (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-6">
               <button
                 onClick={() => handleTypeSelect('item')}
                 className="flex flex-col items-center text-center p-6 md:p-8 bg-white border border-[hsl(var(--border))] rounded-[8px] hover:border-[#0000FF] hover:shadow-hover transition-all group"
@@ -341,6 +326,21 @@ const NewProductForm = () => {
                   {t('new_product.type_item_body')}
                 </p>
               </button>
+
+              {!isRepeatedVerificationFlow && (
+                <button
+                  onClick={() => handleTypeSelect('set')}
+                  className="flex flex-col items-center text-center p-6 md:p-8 bg-white border border-[hsl(var(--border))] rounded-[8px] hover:border-[#0000FF] hover:shadow-hover transition-all group"
+                >
+                  <div className="w-14 h-14 bg-blue-50 rounded-[8px] flex items-center justify-center mb-4 group-hover:scale-105 transition-transform">
+                    <Layers className="w-8 h-8 text-indigo-600" />
+                  </div>
+                  <h3 className="text-xl font-semibold mb-2">{t('new_product.type_set_title')}</h3>
+                  <p className="text-sm text-muted-foreground">
+                    {t('new_product.type_set_body')}
+                  </p>
+                </button>
+              )}
 
               <button
                 onClick={() => handleTypeSelect('consumable')}
@@ -367,7 +367,7 @@ const NewProductForm = () => {
               </button>
 
               <form onSubmit={handleSubmit} className="space-y-8">
-                {selectedListingKind === 'item' && (
+                {selectedListingKind === 'item' && !isRepeatedVerificationFlow && (
                   <div className="space-y-3 rounded-[8px] border border-[hsl(var(--border))] bg-[hsl(var(--muted-bg))] p-5">
                     <Label className="text-base">{t('new_product.item_format')}</Label>
                     <div className="grid gap-3 sm:grid-cols-2">
@@ -410,7 +410,7 @@ const NewProductForm = () => {
                     {formData.product_type === 'Set' ? t('new_product.product_images_required') : t('new_product.product_image_required')}
                   </Label>
                   <ImageUploadField 
-                    maxFiles={5}
+                    maxFiles={6}
                     onFilesSelected={(files) => setFormData(prev => ({
                       ...prev,
                       image: Array.isArray(files) ? files[0] || null : files,

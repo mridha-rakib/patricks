@@ -224,22 +224,31 @@ const queueVerificationEmail = async ({ type, sellerId, productId, productName, 
   const productNameStr = String(productName).trim();
   const sellerEmailStr = String(sellerEmail).trim();
   const reasonStr = reason ? String(reason).trim() : null;
+  const isApproval = type === 'verification_approval';
+  const isCorrection = type === 'verification_correction';
+  const verificationStatus = isApproval ? 'approved' : isCorrection ? 'needs_correction' : 'rejected';
+  const subject = isApproval
+    ? `Product Verified - ${productNameStr}`
+    : isCorrection
+      ? `Correction requested - ${productNameStr}`
+      : `Product Verification Rejected - ${productNameStr}`;
+  const body = isApproval
+    ? `Congratulations! Your product "${productNameStr}" has been verified and is now active on ZahniBoerse. Product ID: ${productIdStr}`
+    : isCorrection
+      ? `Please update your product "${productNameStr}" before it can be approved. Product ID: ${productIdStr}.${reasonStr ? ` Requested correction: ${reasonStr}` : ''}`
+      : `Unfortunately, your product "${productNameStr}" did not pass verification. Product ID: ${productIdStr}.${reasonStr ? ` Reason: ${reasonStr}` : ''}`;
 
   await pb.collection('emails').create({
     recipient: sellerEmailStr,
     type,
     sender: 'info@zahniboerse.com',
-    subject: type === 'verification_approval'
-      ? `Product Verified - ${productNameStr}`
-      : `Product Verification Rejected - ${productNameStr}`,
-    body: type === 'verification_approval'
-      ? `Congratulations! Your product "${productNameStr}" has been verified and is now active on Zahnibörse. Product ID: ${productIdStr}`
-      : `Unfortunately, your product "${productNameStr}" did not pass verification. Product ID: ${productIdStr}.${reasonStr ? ` Reason: ${reasonStr}` : ''}`,
+    subject,
+    body,
     metadata: {
       seller_id: sellerIdStr,
       product_id: productIdStr,
       product_name: productNameStr,
-      verification_status: type === 'verification_approval' ? 'approved' : 'rejected',
+      verification_status: verificationStatus,
       reason: reasonStr,
     },
     status: 'pending',
@@ -1759,6 +1768,70 @@ router.post('/reject-product', async (req, res) => {
     verification_status: 'rejected',
     product: formatAdminProduct(updatedProduct, 'marketplace', seller),
     message: `Product ${productIdStr} has been rejected`,
+  });
+});
+
+// POST /admin/request-correction-product
+router.post('/request-correction-product', async (req, res) => {
+  const { productId, reason } = req.body;
+  const adminId = req.auth.id;
+
+  logger.info(`[ADMIN] Request product correction - Product: ${productId}, Admin: ${adminId}`);
+
+  if (!productId) {
+    return res.status(400).json({ error: 'productId is required' });
+  }
+
+  const productIdStr = String(productId);
+  const product = await pb.collection('products').getOne(productIdStr);
+
+  if (!product) {
+    return res.status(404).json({ error: `Product ${productIdStr} not found` });
+  }
+
+  const seller = await pb.collection('users').getOne(product.seller_id, { $autoCancel: false });
+  const correctionReason = reason || 'Please update the listing details before it can be approved';
+  const reviewedAt = new Date().toISOString();
+
+  const updatedProduct = await pb.collection('products').update(productIdStr, {
+    status: 'draft',
+    verification_status: 'needs_correction',
+    validation_reviewed_at: reviewedAt,
+    validation_admin_id: adminId,
+    validation_notes: correctionReason,
+  }, { $autoCancel: false });
+
+  await createProductVerificationAudit({
+    product: updatedProduct,
+    status: 'needs_correction',
+    adminId,
+    adminNotes: correctionReason,
+  });
+
+  logger.info(`[ADMIN] Product correction requested - Product: ${productIdStr}, Admin: ${adminId}`);
+
+  try {
+    await queueVerificationEmail({
+      type: 'verification_correction',
+      sellerId: product.seller_id,
+      productId: productIdStr,
+      productName: product.name,
+      sellerEmail: seller.email,
+      reason: correctionReason,
+    });
+
+    logger.info(`[ADMIN] Correction email queued for seller - Seller: ${product.seller_id}`);
+  } catch (emailError) {
+    logger.warn(`[ADMIN] Correction email failed - Seller: ${product.seller_id}, Error: ${emailError.message}`);
+  }
+
+  res.json({
+    success: true,
+    productId: productIdStr,
+    status: 'draft',
+    verification_status: 'needs_correction',
+    product: formatAdminProduct(updatedProduct, 'marketplace', seller),
+    message: `Correction requested for product ${productIdStr}`,
   });
 });
 

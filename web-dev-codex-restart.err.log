@@ -67,3 +67,12 @@ Error: connect ECONNREFUSED 127.0.0.1:3001
 [2m2:19:33 AM[22m [31m[1m[vite][22m[39m [31mhttp proxy error: /settings/shop-visibility[39m
 Error: connect ECONNREFUSED 127.0.0.1:3001
     at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1705:16)
+[2m3:55:04 AM[22m [31m[1m[vite][22m[39m [31mhttp proxy error: /api/realtime[39m
+Error: read ECONNRESET
+    at TCP.onStreamRead (node:internal/stream_base_commons:216:20)
+[2m3:56:25 AM[22m [31m[1m[vite][22m[39m [31mhttp proxy error: /settings/fees[39m
+Error: connect ECONNREFUSED 127.0.0.1:3001
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1705:16)
+[2m3:56:25 AM[22m [31m[1m[vite][22m[39m [31mhttp proxy error: /settings/shop-visibility[39m
+Error: connect ECONNREFUSED 127.0.0.1:3001
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1705:16)

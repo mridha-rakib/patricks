@@ -327,7 +327,7 @@ const ProductDetailPage = () => {
   return (
     <>
       <Helmet>
-        <title>{product.name} - Zahniboerse</title>
+        <title>{product.name} - Zahnibörse</title>
       </Helmet>
 
       <main className="flex-1 bg-white py-8 md:py-12">
@@ -451,10 +451,10 @@ const ProductDetailPage = () => {
                 </div>
               </div>
 
-              <div className="mt-8 flex gap-4">
+              <div className="mt-8 flex flex-col gap-3 sm:flex-row sm:gap-4">
                 <Button
                   size="lg"
-                  className="h-14 flex-1 rounded-[6px] bg-[#0000FF] text-base font-semibold text-white shadow-none hover:bg-[#0000CC]"
+                  className="h-14 w-full flex-1 rounded-[6px] bg-[#0000FF] text-base font-semibold text-white shadow-none hover:bg-[#0000CC]"
                   disabled={isSold || isPending}
                   onClick={handleAddToCart}
                 >
@@ -465,7 +465,7 @@ const ProductDetailPage = () => {
                 <Button
                   size="lg"
                   variant="outline"
-                  className={`h-14 w-14 rounded-[6px] border-[#333333] p-0 shadow-none ${
+                  className={`h-14 w-full rounded-[6px] border-[#333333] p-0 shadow-none sm:w-14 ${
                     isFav ? 'bg-red-50 text-red-500' : 'bg-white text-[#151515]'
                   }`}
                   onClick={handleFavoriteToggle}

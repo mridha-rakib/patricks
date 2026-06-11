@@ -1488,7 +1488,7 @@ const LearningAdminPage = () => {
   return (
     <>
       <Helmet>
-        <title>{`${t('learning.admin_title')} - Zahniboerse`}</title>
+        <title>{`${t('learning.admin_title')} - Zahnibörse`}</title>
         <meta name="robots" content="noindex,nofollow,noarchive" />
       </Helmet>
 

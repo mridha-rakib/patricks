@@ -61,6 +61,11 @@ const Header = () => {
   ];
 
   const currentLanguageName = language === 'DE' ? t('language.german') : t('language.english');
+  const formatPrice = (value) =>
+    new Intl.NumberFormat(language === 'DE' ? 'de-DE' : 'en-US', {
+      style: 'currency',
+      currency: 'EUR',
+    }).format(Number(value || 0));
 
   const isActive = (path) => {
     if (path === '/') {
@@ -97,7 +102,6 @@ const Header = () => {
   }, [hoveredNavPath, location.pathname, language, showShopNavigation]);
 
   useEffect(() => {
-    console.log('🔄 useEffect triggered in Header (Mobile Check)');
     const checkMobile = () => setIsMobile(window.innerWidth <= 768);
     checkMobile();
     window.addEventListener('resize', checkMobile);
@@ -112,7 +116,6 @@ const Header = () => {
 
   // Handle Search
   useEffect(() => {
-    console.log('🔄 useEffect triggered in Header (Search Debounce)', { searchTerm });
     const delayDebounceFn = setTimeout(async () => {
       if (searchTerm.trim().length > 1) {
         setIsSearching(true);
@@ -138,7 +141,6 @@ const Header = () => {
 
   // Close search dropdown when clicking outside
   useEffect(() => {
-    console.log('🔄 useEffect triggered in Header (Click Outside Setup)');
     const handleClickOutside = (event) => {
       if (searchRef.current && !searchRef.current.contains(event.target)) {
         setShowSearchResults(false);
@@ -150,7 +152,6 @@ const Header = () => {
 
   // Auto-close dropdown on scroll
   useEffect(() => {
-    console.log('🔄 useEffect triggered in Header (Scroll Setup)');
     const handleScroll = () => {
       if (dropdownOpen) setDropdownOpen(false);
       if (showSearchResults) setShowSearchResults(false);
@@ -195,7 +196,7 @@ const Header = () => {
               <button 
                 onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
                 className="text-[hsl(var(--foreground))] hover:text-[#0000FF] transition-all duration-150 p-2 -ml-2"
-                aria-label="Menu"
+                aria-label={t('nav.menu')}
               >
                 {isMobileMenuOpen ? <X size={24} /> : <Menu size={24} />}
               </button>
@@ -280,7 +281,7 @@ const Header = () => {
                           </div>
                           <div className="flex-1 min-w-0">
                             <p className="text-sm font-medium text-gray-900 truncate">{product.name}</p>
-                            <p className="text-xs text-[#0000FF] font-semibold">€{product.price?.toFixed(2)}</p>
+                            <p className="text-xs text-[#0000FF] font-semibold">{formatPrice(product.price)}</p>
                           </div>
                         </Link>
                       ))}
@@ -565,7 +566,7 @@ const Header = () => {
                   <div className="flex-1 min-w-0 flex flex-col justify-between">
                     <div>
                       <h3 className="font-medium text-sm line-clamp-2 leading-tight">{item.product?.name}</h3>
-                      <p className="text-xs text-gray-500 mt-1">€{item.product?.price.toFixed(2)}</p>
+                      <p className="text-xs text-gray-500 mt-1">{formatPrice(item.product?.price)}</p>
                     </div>
                     <div className="flex items-center justify-between mt-2">
                       {isMarketplaceItem ? (
@@ -602,7 +603,7 @@ const Header = () => {
             <div className="p-4 border-t border-gray-100 bg-gray-50">
               <div className="flex justify-between items-center mb-4">
                 <span className="font-medium">{t('common.total')}</span>
-                <span className="font-bold text-lg text-[#0000FF]">€{getTotal().toFixed(2)}</span>
+                <span className="font-bold text-lg text-[#0000FF]">{formatPrice(getTotal())}</span>
               </div>
               <Button 
                 className="w-full bg-[#0000FF] hover:bg-[#0000CC] text-white min-h-[44px]"
@@ -644,7 +645,7 @@ const Header = () => {
                     <div className="flex-1 min-w-0 flex flex-col justify-between pr-6">
                       <div>
                         <h3 className="font-medium text-sm line-clamp-2 leading-tight">{product.name}</h3>
-                        <p className="text-sm font-bold text-[#0000FF] mt-1">€{product.price?.toFixed(2)}</p>
+                        <p className="text-sm font-bold text-[#0000FF] mt-1">{formatPrice(product.price)}</p>
                       </div>
                       <Button 
                         size="sm" 

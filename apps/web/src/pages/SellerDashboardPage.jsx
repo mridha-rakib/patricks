@@ -264,7 +264,7 @@ const SellerDashboardPage = () => {
   return (
     <>
       <Helmet>
-        <title>Verkäufer Dashboard - Zahnibörse</title>
+        <title>Verkäuferbereich - Zahnibörse</title>
       </Helmet>
 
       <main className="flex-1 bg-[hsl(var(--muted-bg))] py-12">

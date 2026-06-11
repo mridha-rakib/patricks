@@ -4,7 +4,6 @@ import { Link, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { ArrowRight, BookOpenCheck, Layers3 } from 'lucide-react';
 import PopularProductsSection from '@/components/PopularProductsSection.jsx';
-import InfoBannersSection from '@/components/InfoBannersSection.jsx';
 import CustomerReviewsSection from '@/components/CustomerReviewsSection.jsx';
 import { useAuth } from '@/contexts/AuthContext.jsx';
 import { useTranslation } from '@/contexts/TranslationContext.jsx';
@@ -196,7 +195,6 @@ const HomePage = () => {
             </div>
           </div>
         </section>
-        <InfoBannersSection />
         <CustomerReviewsSection />
       </main>
     </>;

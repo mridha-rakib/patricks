@@ -57,7 +57,7 @@ migrate((app) => {
     const existing = collection.fields.getByName("images");
     if (existing) {
       if (existing.type === "file") {
-        existing.maxSelect = 5;
+        existing.maxSelect = 6;
         existing.maxSize = 20971520;
         existing.mimeTypes = ["image/jpeg", "image/png", "image/gif", "image/webp"];
         return true;
@@ -68,7 +68,7 @@ migrate((app) => {
     collection.fields.add(new FileField({
       name: "images",
       required: false,
-      maxSelect: 5,
+      maxSelect: 6,
       maxSize: 20971520,
       mimeTypes: ["image/jpeg", "image/png", "image/gif", "image/webp"],
       thumbs: [],

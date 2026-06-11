@@ -207,9 +207,7 @@ function App() {
 
                     <Route path="/admin/verifications" element={
                       <AdminRoute>
-                        <div className="max-w-7xl mx-auto px-4 py-8 w-full">
-                          <ProductVerificationAdminPage />
-                        </div>
+                        <ProductVerificationAdminPage />
                       </AdminRoute>
                     } />
 

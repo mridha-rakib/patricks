@@ -300,31 +300,25 @@ const ShopPage = () => {
                     </div>
                   ) : (
                     <div className="overflow-hidden rounded-[12px] border border-[#ddd] bg-white">
-                      <div className="grid lg:grid-cols-[minmax(0,1fr)_360px]">
-                        <div className="p-7 text-center md:p-10 lg:p-12 lg:text-left">
-                          <h3 className="mt-5 max-w-xl text-3xl font-bold text-slate-900 md:text-4xl">
-                            {t('shop.coming_soon')}
-                          </h3>
-                          <p className="mt-4 max-w-xl text-base leading-7 text-slate-600">
-                            {t('shop.coming_soon_body')}
-                          </p>
+                      <div className="p-7 text-center md:p-10 lg:p-12 lg:text-left">
+                        <h3 className="mt-5 max-w-xl text-3xl font-bold text-slate-900 md:text-4xl">
+                          {t('shop.coming_soon')}
+                        </h3>
+                        <p className="mt-4 max-w-xl text-base leading-7 text-slate-600">
+                          {t('shop.coming_soon_body')}
+                        </p>
 
-                          {hasActiveFilters && (
-                            <div className="mt-8">
-                              <Button
-                                type="button"
-                                onClick={() => setFilters(getEmptyFilterValues(visibleFilterDefinitions))}
-                                className="h-11 rounded-full bg-[#0000FF] px-6 text-white shadow-none hover:bg-[#0000CC]"
-                              >
-                                {t('marketplace.reset_filters')}
-                              </Button>
-                            </div>
-                          )}
-                        </div>
-
-                        <div className="bg-[linear-gradient(180deg,#f7f7f7_0%,#ffffff_100%)] p-7 md:p-10 lg:p-12">
-                          <FilterSection filters={filters} filterDefinitions={visibleFilterDefinitions} onFiltersChange={setFilters} />
-                        </div>
+                        {hasActiveFilters && (
+                          <div className="mt-8">
+                            <Button
+                              type="button"
+                              onClick={() => setFilters(getEmptyFilterValues(visibleFilterDefinitions))}
+                              className="h-11 rounded-full bg-[#0000FF] px-6 text-white shadow-none hover:bg-[#0000CC]"
+                            >
+                              {t('marketplace.reset_filters')}
+                            </Button>
+                          </div>
+                        )}
                       </div>
                     </div>
                   )}

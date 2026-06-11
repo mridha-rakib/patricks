@@ -3,17 +3,14 @@ import { Helmet } from 'react-helmet';
 import { useNavigate } from 'react-router-dom';
 import {
   ArrowLeft,
-  BadgeCheck,
   CreditCard,
   Minus,
   PackageCheck,
   Pencil,
   Plus,
   ReceiptText,
-  ShieldCheck,
   ShoppingBag,
   Trash2,
-  Truck,
 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge.jsx';
 import { Button } from '@/components/ui/button.jsx';
@@ -73,29 +70,11 @@ const CartPage = () => {
     },
   ];
 
-  const trustItems = [
-    {
-      Icon: ShieldCheck,
-      title: t('info.secure_title'),
-      body: t('checkout.stripe_note'),
-    },
-    {
-      Icon: Truck,
-      title: t('cart.shipping'),
-      body: t('help.shipping_body'),
-    },
-    {
-      Icon: BadgeCheck,
-      title: t('popular.verified'),
-      body: t('shop.subtitle'),
-    },
-  ];
-
   if (cartItems.length === 0) {
     return (
       <>
         <Helmet>
-          <title>{`${t('cart.title')} - Zahniboerse`}</title>
+          <title>{`${t('cart.title')} - Zahnibörse`}</title>
         </Helmet>
 
         <main className="flex-1 bg-[#f6f7f9] px-4 py-10 sm:px-6 md:py-14 lg:px-8">
@@ -138,7 +117,7 @@ const CartPage = () => {
   return (
     <>
       <Helmet>
-        <title>{`${t('cart.title')} - Zahniboerse`}</title>
+        <title>{`${t('cart.title')} - Zahnibörse`}</title>
       </Helmet>
 
       <main className="flex-1 bg-[#f6f7f9] px-4 py-8 sm:px-6 md:py-12 lg:px-8">
@@ -369,17 +348,6 @@ const CartPage = () => {
                   </Button>
                 </div>
 
-                <div className="mt-6 grid gap-3">
-                  {trustItems.map(({ Icon, title, body }) => (
-                    <div key={title} className="flex gap-3 rounded-[8px] border border-black/10 bg-[#f7f7f7] p-4">
-                      <Icon className="mt-0.5 h-4 w-4 shrink-0 text-[#0000FF]" />
-                      <div>
-                        <p className="text-sm font-semibold text-[#151515]">{title}</p>
-                        <p className="mt-1 text-xs leading-5 text-[#666666]">{body}</p>
-                      </div>
-                    </div>
-                  ))}
-                </div>
               </div>
             </aside>
           </section>

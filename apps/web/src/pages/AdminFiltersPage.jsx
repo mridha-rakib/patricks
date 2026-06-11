@@ -516,7 +516,7 @@ const AdminFiltersPage = () => {
   return (
     <>
       <Helmet>
-        <title>{copy.title} - Zahniboerse</title>
+        <title>{copy.title} - Zahnibörse</title>
       </Helmet>
 
       <AccountLayout

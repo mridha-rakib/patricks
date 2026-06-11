@@ -2,6 +2,7 @@ import React from 'react';
 import { NavLink, useLocation } from 'react-router-dom';
 import {
   BadgeEuro,
+  ClipboardCheck,
   CreditCard,
   GraduationCap,
   LayoutDashboard,
@@ -87,6 +88,13 @@ const AccountLayout = ({
       label: t('account.nav_admin'),
       href: '/admin',
       Icon: LayoutDashboard,
+      hidden: !isAdmin,
+    },
+    {
+      key: 'admin-verifications',
+      label: t('account.nav_admin_verifications'),
+      href: '/admin/verifications',
+      Icon: ClipboardCheck,
       hidden: !isAdmin,
     },
     {

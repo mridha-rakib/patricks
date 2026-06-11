@@ -1,12 +1,12 @@
 import React, { useState, useRef, useCallback } from 'react';
-import { UploadCloud, X, FileImage, AlertCircle } from 'lucide-react';
+import { ArrowLeft, ArrowRight, UploadCloud, X, AlertCircle } from 'lucide-react';
 import { cn } from '@/lib/utils.js';
 import { useTranslation } from '@/contexts/TranslationContext.jsx';
 
 const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
 const ALLOWED_TYPES = ['image/jpeg', 'image/png', 'image/webp'];
 
-const ImageUploadField = ({ onFilesSelected, maxFiles = 5, className }) => {
+const ImageUploadField = ({ onFilesSelected, maxFiles = 6, className }) => {
   const { t } = useTranslation();
   const [isDragging, setIsDragging] = useState(false);
   const [files, setFiles] = useState([]);
@@ -97,6 +97,21 @@ const ImageUploadField = ({ onFilesSelected, maxFiles = 5, className }) => {
     });
   }, [maxFiles, onFilesSelected]);
 
+  const moveFile = useCallback((fromIndex, direction) => {
+    setFiles(prev => {
+      const toIndex = fromIndex + direction;
+      if (toIndex < 0 || toIndex >= prev.length) {
+        return prev;
+      }
+
+      const updated = [...prev];
+      const [moved] = updated.splice(fromIndex, 1);
+      updated.splice(toIndex, 0, moved);
+      onFilesSelected(maxFiles === 1 ? (updated[0] || null) : updated);
+      return updated;
+    });
+  }, [maxFiles, onFilesSelected]);
+
   return (
     <div className={cn("w-full", className)}>
       <div
@@ -149,7 +164,38 @@ const ImageUploadField = ({ onFilesSelected, maxFiles = 5, className }) => {
                 alt={`Preview ${index}`}
                 className="w-full h-full object-cover"
               />
-              <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+              <div className="absolute left-2 top-2 rounded-full bg-black/70 px-2 py-1 text-[10px] font-semibold text-white">
+                {index === 0 ? t('upload.cover_image') : index + 1}
+              </div>
+              <div className="absolute inset-0 bg-black/45 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
+                {maxFiles > 1 && (
+                  <>
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        moveFile(index, -1);
+                      }}
+                      disabled={index === 0}
+                      className="rounded-full bg-white/95 p-2 text-slate-900 transition-transform hover:scale-110 disabled:cursor-not-allowed disabled:opacity-40"
+                      aria-label={t('upload.move_image_left')}
+                    >
+                      <ArrowLeft className="w-4 h-4" />
+                    </button>
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        moveFile(index, 1);
+                      }}
+                      disabled={index === files.length - 1}
+                      className="rounded-full bg-white/95 p-2 text-slate-900 transition-transform hover:scale-110 disabled:cursor-not-allowed disabled:opacity-40"
+                      aria-label={t('upload.move_image_right')}
+                    >
+                      <ArrowRight className="w-4 h-4" />
+                    </button>
+                  </>
+                )}
                 <button
                   type="button"
                   onClick={(e) => {
