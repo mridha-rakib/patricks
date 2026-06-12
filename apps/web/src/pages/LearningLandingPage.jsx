@@ -101,11 +101,13 @@ const LearningLandingPage = () => {
                 {t('learning.hero_body')}
               </p>
               <div className="mt-8 flex flex-col gap-3 sm:flex-row">
-                <Button asChild className="h-11 rounded-[8px] bg-[#0000FF] px-6 text-white shadow-none hover:bg-[#0000CC]">
-                  <Link to="/learning/packages">
+                <Button
+                  type="button"
+                  disabled
+                  className="h-11 rounded-[8px] bg-slate-200 px-6 text-slate-500 opacity-100 shadow-none hover:bg-slate-200"
+                >
                     {t('learning.subscribe')}
                     <ArrowRight className="size-4" />
-                  </Link>
                 </Button>
                 <Button asChild variant="outline" className="h-11 rounded-[8px] border-black/10 bg-white px-6 text-slate-700 shadow-none hover:bg-slate-50">
                   <Link to="/learning/dashboard">{t('learning.open_dashboard')}</Link>
@@ -211,11 +213,13 @@ const LearningLandingPage = () => {
                 <h2 className="mt-3 text-3xl font-bold text-slate-900 md:text-4xl">{t('learning.z3_selector_title')}</h2>
                 <p className="mt-3 text-base leading-7 text-slate-600">{t('learning.z3_selector_subtitle')}</p>
               </div>
-              <Button asChild className="h-11 rounded-[8px] bg-[#0000FF] px-6 text-white shadow-none hover:bg-[#0000CC] md:mb-1">
-                <Link to="/learning/packages">
+              <Button
+                type="button"
+                disabled
+                className="h-11 rounded-[8px] bg-slate-200 px-6 text-slate-500 opacity-100 shadow-none hover:bg-slate-200 md:mb-1"
+              >
                   {t('learning.subscribe')}
                   <ArrowRight className="size-4" />
-                </Link>
               </Button>
             </div>
 
