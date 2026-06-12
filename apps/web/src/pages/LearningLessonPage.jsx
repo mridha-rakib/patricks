@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { Helmet } from 'react-helmet';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { ArrowLeft, ArrowRight, CheckCircle2, FileText, Image as ImageIcon, PlayCircle } from 'lucide-react';
@@ -47,6 +47,55 @@ const getPreviewKindFromMime = (mimeType = '') => {
   if (normalized.startsWith('image/')) return 'image';
   if (normalized.startsWith('video/')) return 'video';
   return 'unknown';
+};
+
+const getPreviewKindFromSource = (assetUrl = '', label = '') => {
+  const cleanUrl = String(assetUrl || '').split('?')[0].split('#')[0].toLowerCase();
+  const source = `${cleanUrl} ${String(label || '').toLowerCase()}`;
+  if (cleanUrl.includes('/assets/video')) return 'video';
+  if (cleanUrl.includes('/assets/pdf')) return 'pdf';
+  if (/\.(png|jpe?g|gif|webp|avif|svg)$/.test(source)) return 'image';
+  if (/\.(mp4|webm|ogg|mov|m4v)$/.test(source)) return 'video';
+  if (/\.pdf$/.test(source) || source.includes('pdf')) return 'pdf';
+  if (String(label).toLowerCase().includes('video')) return 'video';
+  return 'unknown';
+};
+
+const isPdfBuffer = (buffer) => {
+  const signature = new TextDecoder()
+    .decode(new Uint8Array(buffer).slice(0, 5))
+    .trim();
+  return signature.startsWith('%PDF');
+};
+
+const wait = (milliseconds) => new Promise((resolve) => {
+  window.setTimeout(resolve, milliseconds);
+});
+
+const fetchAssetWithRetry = async (assetUrl) => {
+  let lastError = null;
+
+  for (let attempt = 0; attempt < 3; attempt += 1) {
+    try {
+      const response = await fetch(assetUrl, { method: 'GET', cache: 'no-store' });
+      if (response.ok) {
+        return response;
+      }
+
+      lastError = new Error(`Asset preview failed (${response.status})`);
+      if (![408, 409, 425, 429, 500, 502, 503, 504].includes(response.status)) {
+        throw lastError;
+      }
+    } catch (error) {
+      lastError = error;
+    }
+
+    if (attempt < 2) {
+      await wait(350 * (attempt + 1));
+    }
+  }
+
+  throw lastError || new Error('Asset preview failed');
 };
 
 const LearningPdfCanvasPreview = ({ fileData, label, t, className = '' }) => {
@@ -158,12 +207,18 @@ const LearningAssetPreview = ({
   kind,
   label,
   t,
+  onAssetRefresh,
   className = '',
 }) => {
   const [previewUrl, setPreviewUrl] = useState('');
   const [previewData, setPreviewData] = useState(null);
   const [previewError, setPreviewError] = useState(false);
   const [resolvedKind, setResolvedKind] = useState(kind);
+  const refreshAttemptedRef = useRef(false);
+
+  useEffect(() => {
+    refreshAttemptedRef.current = false;
+  }, [assetUrl]);
 
   useEffect(() => {
     if (!assetUrl) {
@@ -184,13 +239,13 @@ const LearningAssetPreview = ({
       setResolvedKind(kind);
 
       try {
-        const response = await fetch(assetUrl, { method: 'GET' });
-        if (!response.ok) {
-          throw new Error(`Asset preview failed (${response.status})`);
+        const response = await fetchAssetWithRetry(assetUrl);
+        const blob = await response.blob();
+        let nextKind = kind === 'unknown' ? getPreviewKindFromMime(blob.type) : kind;
+        if (nextKind === 'unknown') {
+          nextKind = getPreviewKindFromSource(assetUrl, label);
         }
 
-        const blob = await response.blob();
-        const nextKind = kind === 'unknown' ? getPreviewKindFromMime(blob.type) : kind;
         if (nextKind === 'pdf') {
           const buffer = await blob.arrayBuffer();
           if (active) {
@@ -198,6 +253,17 @@ const LearningAssetPreview = ({
             setPreviewData(new Uint8Array(buffer));
           }
           return;
+        }
+
+        if (nextKind === 'unknown') {
+          const buffer = await blob.arrayBuffer();
+          if (isPdfBuffer(buffer)) {
+            if (active) {
+              setResolvedKind('pdf');
+              setPreviewData(new Uint8Array(buffer));
+            }
+            return;
+          }
         }
 
         objectUrl = URL.createObjectURL(blob);
@@ -209,6 +275,14 @@ const LearningAssetPreview = ({
         }
       } catch (error) {
         console.error('Failed to load learning asset preview:', error);
+        if (active && typeof onAssetRefresh === 'function' && !refreshAttemptedRef.current) {
+          refreshAttemptedRef.current = true;
+          const refreshed = await onAssetRefresh();
+          if (active && refreshed) {
+            return;
+          }
+        }
+
         if (active) {
           setPreviewError(true);
         }
@@ -223,7 +297,7 @@ const LearningAssetPreview = ({
         URL.revokeObjectURL(objectUrl);
       }
     };
-  }, [assetUrl, kind]);
+  }, [assetUrl, kind, label, onAssetRefresh]);
 
   if (previewError || resolvedKind === 'unknown') {
     return (
@@ -287,22 +361,28 @@ const LearningLessonPage = () => {
   const [autoSaving, setAutoSaving] = useState(false);
   const [accessDenied, setAccessDenied] = useState(null);
 
+  const loadCurrentLesson = useCallback(async () => {
+    const token = pb.authStore.token;
+    const result = subtopicSlug
+      ? await getLearningLessonBySlug({
+        token,
+        packageSlug,
+        topicSlug,
+        subtopicSlug,
+      })
+      : await getLearningLesson({ token, lessonId });
+
+    return localizeLearningLessonPayload(result, language);
+  }, [language, lessonId, packageSlug, subtopicSlug, topicSlug]);
+
   useEffect(() => {
     let active = true;
-    const token = pb.authStore.token;
 
     const loadLesson = async () => {
       try {
-        const result = subtopicSlug
-          ? await getLearningLessonBySlug({
-            token,
-            packageSlug,
-            topicSlug,
-            subtopicSlug,
-          })
-          : await getLearningLesson({ token, lessonId });
+        const result = await loadCurrentLesson();
         if (active) {
-          setData(localizeLearningLessonPayload(result, language));
+          setData(result);
           setAccessDenied(null);
         }
       } catch (error) {
@@ -327,7 +407,19 @@ const LearningLessonPage = () => {
     return () => {
       active = false;
     };
-  }, [language, lessonId, navigate, packageSlug, subtopicSlug, t, topicSlug]);
+  }, [loadCurrentLesson, t]);
+
+  const refreshLearningLessonAssets = useCallback(async () => {
+    try {
+      const result = await loadCurrentLesson();
+      setData(result);
+      setAccessDenied(null);
+      return true;
+    } catch (error) {
+      console.error('Failed to refresh learning asset URLs:', error);
+      return false;
+    }
+  }, [loadCurrentLesson]);
 
   const saveProgress = async (status, progressPercentage) => {
     const token = pb.authStore.token;
@@ -465,15 +557,7 @@ const LearningLessonPage = () => {
   const contentTypeLabel = getLearningContentTypeLabel(t, data.lesson.contentType);
 
   const getPreviewKind = (assetUrl, label = '') => {
-    const cleanUrl = String(assetUrl || '').split('?')[0].split('#')[0].toLowerCase();
-    const source = `${cleanUrl} ${String(label || '').toLowerCase()}`;
-    if (cleanUrl.includes('/assets/video')) return 'video';
-    if (cleanUrl.includes('/assets/pdf')) return 'pdf';
-    if (/\.(png|jpe?g|gif|webp|avif|svg)$/.test(source)) return 'image';
-    if (/\.(mp4|webm|ogg|mov|m4v)$/.test(source)) return 'video';
-    if (/\.pdf$/.test(source) || String(label).toLowerCase().includes('pdf')) return 'pdf';
-    if (String(label).toLowerCase().includes('video')) return 'video';
-    return 'unknown';
+    return getPreviewKindFromSource(assetUrl, label);
   };
 
   const getPreviewIcon = (kind) => {
@@ -495,7 +579,13 @@ const LearningLessonPage = () => {
           <span>{label}</span>
         </div>
 
-        <LearningAssetPreview assetUrl={assetUrl} kind={kind} label={label} t={t} />
+        <LearningAssetPreview
+          assetUrl={assetUrl}
+          kind={kind}
+          label={label}
+          t={t}
+          onAssetRefresh={refreshLearningLessonAssets}
+        />
       </article>
     );
   };
@@ -551,6 +641,7 @@ const LearningLessonPage = () => {
                         kind="video"
                         label={data.lesson.title}
                         t={t}
+                        onAssetRefresh={refreshLearningLessonAssets}
                         className="aspect-video"
                       />
                     ) : (

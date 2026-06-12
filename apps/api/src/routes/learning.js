@@ -4177,11 +4177,13 @@ const handleProtectedLessonAsset = async (req, res, attachmentIndex = null) => {
 
   res.setHeader('Cache-Control', 'private, no-store, max-age=0');
   res.setHeader('X-Robots-Tag', 'noindex, nofollow, noarchive');
+  res.setHeader('X-Content-Type-Options', 'nosniff');
 
   const generatedSeedAsset = getGeneratedSeedAsset(lessonRecord, asset);
   if (generatedSeedAsset) {
     res.setHeader('Content-Type', 'application/pdf');
     res.setHeader('Content-Length', generatedSeedAsset.length);
+    res.setHeader('Accept-Ranges', 'none');
     const filename = encodeURIComponent(`${String(asset.label || lessonRecord.slug || assetType).replace(/\.pdf$/i, '')}.pdf`);
     res.setHeader('Content-Disposition', `${asset.disposition || 'attachment'}; filename*=UTF-8''${filename}`);
     return res.send(generatedSeedAsset);
@@ -4207,6 +4209,22 @@ const handleProtectedLessonAsset = async (req, res, attachmentIndex = null) => {
 
   if (!upstreamResponse?.ok || !upstreamResponse.body) {
     return res.status(502).json({ error: 'Failed to load protected asset' });
+  }
+
+  if (assetType === 'pdf') {
+    const assetBuffer = Buffer.from(await upstreamResponse.arrayBuffer());
+    const isPdf = assetBuffer.subarray(0, 5).toString('utf8').trim().startsWith('%PDF');
+    if (!isPdf) {
+      logger.warn(`[LEARNING] Protected PDF asset returned non-PDF content for lesson ${lessonRecord.id}`);
+      return res.status(502).json({ error: 'Protected PDF asset is invalid' });
+    }
+
+    const filename = encodeURIComponent(`${String(asset.label || lessonRecord.slug || 'material').replace(/\.pdf$/i, '')}.pdf`);
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader('Content-Length', assetBuffer.length);
+    res.setHeader('Accept-Ranges', 'none');
+    res.setHeader('Content-Disposition', `inline; filename*=UTF-8''${filename}`);
+    return res.send(assetBuffer);
   }
 
   const contentType = upstreamResponse.headers.get('content-type') || (
