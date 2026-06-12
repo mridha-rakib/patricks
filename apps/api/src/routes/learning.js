@@ -522,14 +522,29 @@ const getGeneratedSeedAsset = (lessonRecord, asset) => {
   });
 };
 
-const isPocketBaseFileUrl = (value) => {
+const getPocketBaseFilePath = (value) => {
   try {
-    const url = new URL(value);
-    const pocketBaseUrl = new URL(POCKETBASE_HOST);
-    return url.origin === pocketBaseUrl.origin && url.pathname.includes('/api/files/');
+    const url = new URL(value, FRONTEND_URL);
+    const filePathIndex = url.pathname.indexOf('/api/files/');
+    if (filePathIndex === -1) {
+      return '';
+    }
+
+    return `${url.pathname.slice(filePathIndex)}${url.search || ''}`;
   } catch {
-    return false;
+    return '';
   }
+};
+
+const isPocketBaseFileUrl = (value) => Boolean(getPocketBaseFilePath(value));
+
+const toFetchablePocketBaseFileUrl = (value) => {
+  const filePath = getPocketBaseFilePath(value);
+  if (!filePath) {
+    return value;
+  }
+
+  return `${POCKETBASE_HOST}${filePath}`;
 };
 
 const getProtectedAssetFetchHeaders = (assetUrl) => {
@@ -4201,10 +4216,11 @@ const handleProtectedLessonAsset = async (req, res, attachmentIndex = null) => {
     return res.send(`<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>${escapedTitle}</title><style>html,body{margin:0;height:100%;background:#eef2ff}iframe{border:0;width:100%;height:100%}</style></head><body><iframe src="${embedUrl}" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen referrerpolicy="no-referrer"></iframe></body></html>`);
   }
 
-  const upstreamResponse = await fetch(asset.url, {
+  const fetchableAssetUrl = toFetchablePocketBaseFileUrl(asset.url);
+  const upstreamResponse = await fetch(fetchableAssetUrl, {
     method: 'GET',
     redirect: 'follow',
-    headers: getProtectedAssetFetchHeaders(asset.url),
+    headers: getProtectedAssetFetchHeaders(fetchableAssetUrl),
   }).catch(() => null);
 
   if (!upstreamResponse?.ok || !upstreamResponse.body) {

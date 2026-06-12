@@ -6,6 +6,10 @@
 	RewriteRule ^ index.html [L]
 </IfModule>
 
+<IfModule mod_mime.c>
+	AddType application/javascript .mjs
+</IfModule>
+
 <IfModule mod_headers.c>
 	Header set X-Powered-By "Hostinger Horizons"
 
