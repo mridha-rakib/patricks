@@ -1,20 +1,73 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { Helmet } from 'react-helmet';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { ArrowRight, BookOpenText, CheckCircle2, ClipboardList, PlayCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button.jsx';
 import { Badge } from '@/components/ui/badge.jsx';
-import { listLearningPackages } from '@/lib/learningApi.js';
+import { getLearningDashboard, listLearningPackages } from '@/lib/learningApi.js';
 import { localizeLearningPackageList } from '@/lib/learningContentLocalization.js';
 import { getPriceIntervalLabel } from '@/lib/learningPresentation.js';
+import { getLearningCheckoutPath } from '@/lib/learningRoutes.js';
+import { useAuth } from '@/contexts/AuthContext.jsx';
 import { useTranslation } from '@/contexts/TranslationContext.jsx';
+import pb from '@/lib/pocketbaseClient.js';
 
 const getCurrentUrl = () => (typeof window !== 'undefined' ? window.location.href : '');
+const ACTIVE_SUBSCRIPTION_STATUSES = new Set(['active', 'trialing']);
+
+const hasActiveLearningSubscription = (dashboard) => {
+  const status = String(dashboard?.subscription?.status || '').trim();
+  return dashboard?.hasAccess === true
+    && dashboard?.subscription
+    && ACTIVE_SUBSCRIPTION_STATUSES.has(status)
+    && dashboard.subscription.hasAccess !== false;
+};
 
 const LearningLandingPage = () => {
+  const navigate = useNavigate();
+  const { isAuthenticated } = useAuth();
   const { t, language } = useTranslation();
   const [packages, setPackages] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [checkingSubscription, setCheckingSubscription] = useState(isAuthenticated);
+
+  useEffect(() => {
+    let active = true;
+    const token = pb.authStore.token;
+
+    if (!isAuthenticated || !token) {
+      setCheckingSubscription(false);
+      return () => {
+        active = false;
+      };
+    }
+
+    setCheckingSubscription(true);
+
+    const checkSubscription = async () => {
+      try {
+        const dashboard = await getLearningDashboard(token);
+        if (!active) return;
+
+        if (hasActiveLearningSubscription(dashboard)) {
+          navigate('/learning/dashboard', { replace: true });
+          return;
+        }
+      } catch (error) {
+        console.error('Failed to check learning subscription:', error);
+      } finally {
+        if (active) {
+          setCheckingSubscription(false);
+        }
+      }
+    };
+
+    checkSubscription();
+
+    return () => {
+      active = false;
+    };
+  }, [isAuthenticated, navigate]);
 
   useEffect(() => {
     let active = true;
@@ -73,6 +126,10 @@ const LearningLandingPage = () => {
     },
   ];
 
+  if (checkingSubscription) {
+    return <div className="flex min-h-screen items-center justify-center bg-[#f7f7f7] text-slate-500">{t('common.loading')}</div>;
+  }
+
   return (
     <>
       <Helmet>
@@ -101,13 +158,11 @@ const LearningLandingPage = () => {
                 {t('learning.hero_body')}
               </p>
               <div className="mt-8 flex flex-col gap-3 sm:flex-row">
-                <Button
-                  type="button"
-                  disabled
-                  className="h-11 rounded-[8px] bg-slate-200 px-6 text-slate-500 opacity-100 shadow-none hover:bg-slate-200"
-                >
+                <Button asChild className="h-11 rounded-[8px] bg-[#0000FF] px-6 text-white shadow-none hover:bg-[#0000CC]">
+                  <Link to={getLearningCheckoutPath(featuredPackage, 'month')}>
                     {t('learning.subscribe')}
                     <ArrowRight className="size-4" />
+                  </Link>
                 </Button>
                 <Button asChild variant="outline" className="h-11 rounded-[8px] border-black/10 bg-white px-6 text-slate-700 shadow-none hover:bg-slate-50">
                   <Link to="/learning/dashboard">{t('learning.open_dashboard')}</Link>
@@ -213,13 +268,11 @@ const LearningLandingPage = () => {
                 <h2 className="mt-3 text-3xl font-bold text-slate-900 md:text-4xl">{t('learning.z3_selector_title')}</h2>
                 <p className="mt-3 text-base leading-7 text-slate-600">{t('learning.z3_selector_subtitle')}</p>
               </div>
-              <Button
-                type="button"
-                disabled
-                className="h-11 rounded-[8px] bg-slate-200 px-6 text-slate-500 opacity-100 shadow-none hover:bg-slate-200 md:mb-1"
-              >
+              <Button asChild className="h-11 rounded-[8px] bg-[#0000FF] px-6 text-white shadow-none hover:bg-[#0000CC] md:mb-1">
+                <Link to={getLearningCheckoutPath(featuredPackage, 'month')}>
                   {t('learning.subscribe')}
                   <ArrowRight className="size-4" />
+                </Link>
               </Button>
             </div>
 

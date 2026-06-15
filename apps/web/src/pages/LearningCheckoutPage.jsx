@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Helmet } from 'react-helmet';
 import { Link, useLocation, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { ArrowLeft, ArrowRight, CheckCircle2, CreditCard, RefreshCw } from 'lucide-react';
@@ -22,10 +22,7 @@ import {
   getPriceIntervalLabel,
 } from '@/lib/learningPresentation.js';
 import {
-  getSubscriptionDateLabelKey,
-  getSubscriptionDisplayEndDate,
   getSubscriptionStatusHintKey,
-  getSubscriptionStatusLabel,
   getSubscriptionStatusToneClass,
 } from '@/lib/subscriptionStatus.js';
 import { useAuth } from '@/contexts/AuthContext.jsx';
@@ -117,12 +114,8 @@ const LearningCheckoutPage = () => {
   const checkoutEnabled = packageData?.checkoutEnabled !== false;
   const hasManagedSubscription = dashboard?.subscription && dashboard.subscription.packageId === packageData?.id;
 
-  const statusLabel = useMemo(() => getSubscriptionStatusLabel(t, dashboard?.subscription?.status), [dashboard?.subscription?.status, t]);
   const subscriptionStatus = dashboard?.subscription?.status || '';
   const statusHintKey = getSubscriptionStatusHintKey(subscriptionStatus);
-  const dateLabelKey = getSubscriptionDateLabelKey(dashboard?.subscription);
-  const displayEndDate = getSubscriptionDisplayEndDate(dashboard?.subscription);
-  const formattedDisplayEndDate = formatDate(displayEndDate, locale);
   const nextChargeCopy = isFreeCheckout && !hasManagedSubscription
     ? t('learning.no_payment_details_required')
     : hasManagedSubscription
@@ -299,17 +292,6 @@ const LearningCheckoutPage = () => {
                 </div>
               )}
 
-              <div className="mt-8 grid gap-3 sm:grid-cols-2">
-                <div className="learning-subtle-card p-5">
-                  <p className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-500">{t('learning.payment_status')}</p>
-                  <p className="mt-2 text-2xl font-semibold text-slate-900">{statusLabel}</p>
-                </div>
-                <div className="learning-subtle-card p-5">
-                  <p className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-500">{t(dateLabelKey)}</p>
-                  <p className="mt-2 text-2xl font-semibold text-slate-900">{formattedDisplayEndDate}</p>
-                </div>
-              </div>
-
               <div className="learning-subtle-card mt-8 p-5">
                 <p className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-500">{t('learning.billing_cycle')}</p>
                 <div className="mt-4 grid grid-cols-1 gap-2 rounded-[8px] border border-black/6 bg-white p-2 sm:grid-cols-2">
@@ -354,14 +336,7 @@ const LearningCheckoutPage = () => {
                     </p>
                   )}
                   <p className="mt-1">{nextChargeCopy}</p>
-                  <p className="mt-1">
-                    {isFreeCheckout
-                      ? t('learning.free_subscription_terms')
-                      : t('learning.subscription_clear_terms', {
-                        price: formatLearningPrice(displayPrice, packageData.currency, locale),
-                        interval: getBillingIntervalLabel(t, activeInterval),
-                      })}
-                  </p>
+                  {isFreeCheckout && <p className="mt-1">{t('learning.free_subscription_terms')}</p>}
                 </div>
               </div>
             </div>
