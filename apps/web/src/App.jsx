@@ -1,5 +1,5 @@
 import React from 'react';
-import { Navigate, Route, Routes, BrowserRouter as Router } from 'react-router-dom';
+import { Route, Routes, BrowserRouter as Router } from 'react-router-dom';
 import { Toaster } from '@/components/ui/sonner.jsx';
 import { AuthProvider } from '@/contexts/AuthContext.jsx';
 import { CartProvider } from '@/contexts/CartContext.jsx';
@@ -78,7 +78,7 @@ function App() {
                     <Route path="/marketplace" element={<MarketplacePage />} />
                     <Route path="/learning" element={<LearningLandingPage />} />
                     <Route path="/learning/abo" element={<LearningPackageSelectorPage />} />
-                    <Route path="/learning/packages" element={<Navigate to="/learning" replace />} />
+                    <Route path="/learning/packages" element={<LearningPackageSelectorPage />} />
                     <Route path="/learning/packages/:slug" element={<LearningPackagePage />} />
                     <Route path="/learning/subscribe/:slug" element={<LearningCheckoutPage />} />
                     <Route path="/learning/topics/:packageSlug/:topicSlug" element={<LearningModulePage />} />
