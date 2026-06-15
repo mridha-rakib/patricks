@@ -8,6 +8,9 @@ import iframeRouteRestorationPlugin from './plugins/vite-plugin-iframe-route-res
 import pocketbaseAuthPlugin from './plugins/vite-plugin-pocketbase-auth.js';
 
 import { readFileSync } from 'node:fs';
+import { createRequire } from 'module';
+
+const require = createRequire(import.meta.url);
 
 const pkg = JSON.parse(readFileSync('./package.json', 'utf-8'));
 const allDeps = Object.keys(pkg.dependencies || {});

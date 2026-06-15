@@ -1,6 +1,9 @@
 import js from '@eslint/js';
 import importPlugin from 'eslint-plugin-import';
 import globals from 'globals';
+import { createRequire } from 'module';
+
+const require = createRequire(import.meta.url);
 
 export default [
 	{ ignores: ['node_modules/**'] },

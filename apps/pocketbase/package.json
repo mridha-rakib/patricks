@@ -5,8 +5,8 @@
   "private": true,
   "scripts": {
     "setup:windows": "powershell -ExecutionPolicy Bypass -File scripts/install-pocketbase-windows.ps1",
-    "dev": "npm run migrations:up --silent && node scripts/run-pocketbase.mjs serve --http=127.0.0.1:8090 --dir=./pb_data_local --migrationsDir=./pb_migrations --hooksDir=./pb_hooks --encryptionEnv=PB_ENCRYPTION_KEY --hooksWatch=false",
-    "start": "npm run migrations:up --silent && node scripts/run-pocketbase.mjs serve --http=127.0.0.1:8090 --dir=./pb_data_local --migrationsDir=./pb_migrations --hooksDir=./pb_hooks --encryptionEnv=PB_ENCRYPTION_KEY --hooksWatch=false",
+    "dev": "node init && npm run migrations:up --silent && node scripts/run-pocketbase.mjs serve --http=127.0.0.1:8090 --dir=./pb_data_local --migrationsDir=./pb_migrations --hooksDir=./pb_hooks --encryptionEnv=PB_ENCRYPTION_KEY --hooksWatch=false",
+    "start": "node init && npm run migrations:up --silent && node scripts/run-pocketbase.mjs serve --http=127.0.0.1:8090 --dir=./pb_data_local --migrationsDir=./pb_migrations --hooksDir=./pb_hooks --encryptionEnv=PB_ENCRYPTION_KEY --hooksWatch=false",
     "migrations:up": "node scripts/run-pocketbase.mjs migrate up --dir=./pb_data_local --migrationsDir=./pb_migrations --hooksDir=./pb_hooks --encryptionEnv=PB_ENCRYPTION_KEY",
     "migrations:down": "node scripts/run-pocketbase.mjs migrate down --dir=./pb_data_local --migrationsDir=./pb_migrations --hooksDir=./pb_hooks --encryptionEnv=PB_ENCRYPTION_KEY",
     "migrations:snapshot": "node scripts/run-pocketbase.mjs migrate collections --dir=./pb_data_local --migrationsDir=./pb_snapshots --encryptionEnv=PB_ENCRYPTION_KEY",

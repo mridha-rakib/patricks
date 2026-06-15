@@ -2,6 +2,9 @@ import react from 'eslint-plugin-react';
 import reactHooks from 'eslint-plugin-react-hooks';
 import importPlugin from 'eslint-plugin-import';
 import globals from 'globals';
+import { createRequire } from 'module';
+
+const require = createRequire(import.meta.url);
 
 export default [
 	{ ignores: ['node_modules/**', 'dist/**', 'build/**', 'vite.config.js'] },
