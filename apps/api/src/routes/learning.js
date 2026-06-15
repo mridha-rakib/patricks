@@ -111,9 +111,11 @@ const textContentToRichBlocks = (value) =>
         text: sanitizeText(text),
         size: index === 0 ? 'large' : 'normal',
         bold: false,
+        italic: false,
       }],
       size: index === 0 ? 'large' : 'normal',
       bold: false,
+      italic: false,
     }));
 
 const sanitizeInlineSpans = (spans, fallbackText = '', fallback = {}) => {
@@ -122,6 +124,7 @@ const sanitizeInlineSpans = (spans, fallbackText = '', fallback = {}) => {
     : [{
       text: fallbackText,
       bold: fallback.bold === true,
+      italic: fallback.italic === true,
       size: fallback.size || 'normal',
     }];
 
@@ -131,12 +134,13 @@ const sanitizeInlineSpans = (spans, fallbackText = '', fallback = {}) => {
     .map((span) => ({
       text: sanitizeText(span?.text),
       bold: span?.bold === true,
+      italic: span?.italic === true,
       size: LEARNING_RICH_TEXT_SIZES.has(span?.size) ? span.size : 'normal',
     }))
     .filter((span) => span.text.length > 0)
     .forEach((span) => {
       const previous = merged.at(-1);
-      if (previous && previous.bold === span.bold && previous.size === span.size) {
+      if (previous && previous.bold === span.bold && previous.italic === span.italic && previous.size === span.size) {
         previous.text += span.text;
       } else {
         merged.push({ ...span });
@@ -205,6 +209,7 @@ const sanitizeLearningRichContent = (value, fallbackText = '') => {
       const size = LEARNING_RICH_TEXT_SIZES.has(block?.size) ? block.size : 'normal';
       const spans = sanitizeInlineSpans(block?.spans, block?.text, {
         bold: block?.bold === true,
+        italic: block?.italic === true,
         size,
       });
       const text = spans.map((span) => span.text).join('') || sanitizeText(block?.text);
@@ -216,6 +221,7 @@ const sanitizeLearningRichContent = (value, fallbackText = '') => {
         spans,
         size,
         bold: block?.bold === true,
+        italic: block?.italic === true,
       };
     })
     .filter(Boolean);

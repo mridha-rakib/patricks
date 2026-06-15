@@ -5,10 +5,10 @@
   "scripts": {
     "setup:windows": "npm run setup:windows --prefix apps/pocketbase && npm run migrations:up --prefix apps/pocketbase",
     "predev": "node scripts/check-dev-ports.mjs 3000 3001 8090",
-    "dev": "concurrently --kill-others --raw \"npm run dev --prefix apps/pocketbase\" \"node scripts/wait-for-port.mjs 127.0.0.1 8090 30000 && npm run dev --prefix apps/api\" \"node scripts/wait-for-port.mjs 127.0.0.1 8090 30000 && node scripts/wait-for-port.mjs 127.0.0.1 3001 30000 && npm run dev --prefix apps/web\"",
+    "dev": "node api.js && concurrently --kill-others --raw \"npm run dev --prefix apps/pocketbase\" \"node scripts/wait-for-port.mjs 127.0.0.1 8090 30000 && npm run dev --prefix apps/api\" \"node scripts/wait-for-port.mjs 127.0.0.1 8090 30000 && node scripts/wait-for-port.mjs 127.0.0.1 3001 30000 && npm run dev --prefix apps/web\"",
     "dev:stop": "node scripts/stop-dev-ports.mjs 3000 3001 8090",
-    "build": "concurrently --raw \"npm run build --prefix apps/web\"",
-    "start": "concurrently --kill-others --raw \"npm run start --prefix apps/api\" \"npm run start --prefix apps/pocketbase\"",
+    "build": "node api.js && concurrently --raw \"npm run build --prefix apps/web\"",
+    "start": "node api.js && concurrently --kill-others --raw \"npm run start --prefix apps/api\" \"npm run start --prefix apps/pocketbase\"",
     "lint": "concurrently --raw \"npm run lint --prefix apps/web\" \"npm run lint --prefix apps/api\""
   },
   "devDependencies": {
