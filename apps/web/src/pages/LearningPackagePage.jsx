@@ -12,7 +12,7 @@ import {
   getMinutesLabel,
   getPriceIntervalLabel,
 } from '@/lib/learningPresentation.js';
-import { getLearningTopicPath } from '@/lib/learningRoutes.js';
+import { getLearningCheckoutPath, getLearningTopicPath } from '@/lib/learningRoutes.js';
 import { getSubscriptionStatusHintKey, getSubscriptionStatusLabel, getSubscriptionStatusToneClass } from '@/lib/subscriptionStatus.js';
 import { useAuth } from '@/contexts/AuthContext.jsx';
 import { useTranslation } from '@/contexts/TranslationContext.jsx';
@@ -98,7 +98,7 @@ const LearningPackagePage = () => {
   const primaryCtaTo = !isAuthenticated
     ? '/auth'
     : canStartCheckout
-      ? `/learning/subscribe/${packageData?.slug}?cycle=${billingCycle}`
+      ? getLearningCheckoutPath(packageData, billingCycle)
       : hasManagedAccess
         ? '/learning/dashboard'
         : '/learning/subscription';
@@ -159,7 +159,7 @@ const LearningPackagePage = () => {
       </Helmet>
 
       <main className="learning-shell flex-1">
-        <section className="overflow-hidden border-b border-black/5">
+        <section className="border-b border-black/5">
           <div className="container mx-auto px-4 py-12 sm:px-6 lg:px-8 md:py-16">
             <Link to="/learning" className="inline-flex items-center gap-2 text-sm font-medium text-slate-500 transition-colors hover:text-[#0000FF]">
               <ArrowLeft className="size-4" />
@@ -167,7 +167,7 @@ const LearningPackagePage = () => {
             </Link>
 
             <div className="mt-6 grid gap-8 lg:grid-cols-[minmax(0,1fr)_400px] lg:items-start">
-              <div>
+              <div className="order-1">
                 <Badge className="rounded-[8px] bg-white/90 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.18em] text-[#0000FF] shadow-none">
                   {t('learning.overview')}
                 </Badge>
@@ -177,20 +177,9 @@ const LearningPackagePage = () => {
                 <p className="mt-4 text-lg leading-8 text-slate-600">{packageData.subtitle}</p>
                 <p className="mt-5 max-w-3xl text-base leading-7 text-slate-600">{packageData.description}</p>
 
-                <div className="mt-8 grid gap-3 sm:grid-cols-3">
-                  {[
-                    `${packageData.moduleCount} ${t('learning.modules_count')}`,
-                    `${lessonTotals} ${t('learning.lessons_count')}`,
-                    getMinutesLabel(t, Math.max(totalEstimatedMinutes, 0)),
-                  ].map((item) => (
-                    <div key={item} className="learning-inline-card px-5 py-4 text-sm font-semibold text-slate-700">
-                      {item}
-                    </div>
-                  ))}
-                </div>
               </div>
 
-              <aside className="learning-card overflow-hidden">
+              <aside className="learning-card order-2 overflow-hidden lg:sticky lg:top-24 lg:row-span-2 lg:max-h-[calc(100vh-7rem)] lg:self-start lg:overflow-y-auto">
                 {packageData.heroImageUrl && (
                   <div className="aspect-[4/3] overflow-hidden bg-[#f3f3f3]">
                     <img src={packageData.heroImageUrl} alt={packageData.title} className="h-full w-full object-cover" />
@@ -265,31 +254,127 @@ const LearningPackagePage = () => {
                       {t('learning.checkout_disabled_cta')}
                     </Button>
                   )}
-
-                  <Button asChild variant="outline" className="mt-3 h-11 w-full rounded-[8px] border-black/10 bg-white text-slate-700 shadow-none hover:bg-slate-50">
-                    <Link to="/learning/dashboard">{t('learning.dashboard')}</Link>
-                  </Button>
-
-                  <div className="mt-6 space-y-3">
-                    {[
-                      t('learning.subscription_note'),
-                      t('learning.access_included'),
-                      t('learning.recurring_note'),
-                    ].map((item) => (
-                      <div key={item} className="learning-subtle-card flex gap-3 p-4">
-                        <CheckCircle2 className="mt-0.5 size-5 shrink-0 text-[#0000FF]" />
-                        <p className="text-sm leading-6 text-slate-600">{item}</p>
-                      </div>
-                    ))}
-                  </div>
                 </div>
               </aside>
+
+              <div className="order-3 lg:col-start-1">
+                <div className="grid gap-3 sm:grid-cols-3">
+                  {[
+                    `${packageData.moduleCount} ${t('learning.modules_count')}`,
+                    `${lessonTotals} ${t('learning.lessons_count')}`,
+                    getMinutesLabel(t, Math.max(totalEstimatedMinutes, 0)),
+                  ].map((item) => (
+                    <div key={item} className="learning-inline-card px-5 py-4 text-sm font-semibold text-slate-700">
+                      {item}
+                    </div>
+                  ))}
+                </div>
+
+                <div className="learning-card mt-6 p-6 md:p-8">
+                  <div className="flex items-center justify-between gap-4">
+                    <div>
+                      <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[#0000FF]/75">{t('learning.curriculum_preview')}</p>
+                      <h2 className="mt-3 text-3xl font-semibold text-slate-900">{t('learning.curriculum_preview')}</h2>
+                    </div>
+                    <Badge className="rounded-[8px] bg-slate-100 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-600 shadow-none">
+                      {lessonTotals} {t('learning.lessons_count')}
+                    </Badge>
+                  </div>
+
+                  <div className="mt-6 space-y-4">
+                    {modules.map((moduleRecord) => (
+                      <section key={moduleRecord.id} className="learning-subtle-card p-5">
+                        <div className="flex items-start justify-between gap-4">
+                          <div>
+                            <div className="flex flex-wrap items-center gap-2">
+                              <h3 className="text-xl font-semibold text-slate-900">{moduleRecord.title}</h3>
+                              {moduleRecord.isPreview && (
+                                <Badge className="rounded-[8px] bg-[#0000FF]/10 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.14em] text-[#0000FF] shadow-none">
+                                  {t('learning.preview_label')}
+                                </Badge>
+                              )}
+                            </div>
+                            <p className="mt-2 text-sm leading-6 text-slate-600">{moduleRecord.description}</p>
+                          </div>
+                          <div className="rounded-[8px] bg-white p-3 text-[#0000FF]">
+                            <BookOpenText className="size-4" />
+                          </div>
+                        </div>
+
+                        <div className="mt-5 space-y-3">
+                          {moduleRecord.lessons.map((lessonRecord) => {
+                            const isPreview = moduleRecord.isPreview || lessonRecord.isPreview;
+                            return (
+                              <div key={lessonRecord.id} className="learning-inline-card flex items-center justify-between gap-3 px-4 py-3">
+                                <div className="flex min-w-0 items-center gap-3">
+                                  {isPreview ? (
+                                    <PlayCircle className="size-4 shrink-0 text-[#0000FF]" />
+                                  ) : (
+                                    <LockKeyhole className="size-4 shrink-0 text-slate-400" />
+                                  )}
+                                  <div className="min-w-0">
+                                    <p className="truncate text-sm font-semibold text-slate-900">{lessonRecord.title}</p>
+                                    <p className="text-xs text-slate-500">{getMinutesLabel(t, lessonRecord.estimatedMinutes)}</p>
+                                  </div>
+                                </div>
+                                <Badge className={`rounded-[8px] px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.14em] shadow-none ${
+                                  isPreview ? 'bg-[#0000FF]/10 text-[#0000FF]' : 'bg-slate-100 text-slate-500'
+                                }`}>
+                                  {isPreview ? t('learning.preview_label') : t('learning.status_locked')}
+                                </Badge>
+                              </div>
+                            );
+                          })}
+                        </div>
+
+                        <div className="mt-4">
+                          <Button asChild variant="outline" className="h-10 rounded-[8px] border-black/10 bg-white px-5 text-slate-700 shadow-none hover:bg-slate-50">
+                            <Link to={getLearningTopicPath(packageData, moduleRecord)}>{t('learning.open_module')}</Link>
+                          </Button>
+                        </div>
+                      </section>
+                    ))}
+                  </div>
+
+                  <div className="mt-8 rounded-[8px] border border-[#0000FF]/14 bg-[#f6f7ff] p-5">
+                    <p className="text-base leading-7 text-slate-600">
+                      {t('learning.package_access_terms')} {t('learning.subscription_clear_terms', {
+                        price: formatLearningPrice(activePrice, packageData.currency, locale),
+                        interval: getBillingIntervalLabel(t, activeInterval),
+                      })}
+                    </p>
+                    {hasManagedSubscription && (
+                      <p className="mt-3 text-sm text-slate-600">
+                        {hasManagedAccess
+                          ? t('learning.current_subscription_active_body')
+                          : t('learning.current_subscription_inactive_body', { status: statusLabel })}
+                      </p>
+                    )}
+                    {checkoutEnabled || hasManagedSubscription ? (
+                      <Button asChild className="mt-5 h-11 rounded-[8px] bg-[#0000FF] px-6 text-white shadow-none hover:bg-[#0000CC]">
+                        <Link to={primaryCtaTo} state={!isAuthenticated ? { from: location } : undefined}>
+                          {primaryCtaLabel}
+                          <ArrowRight className="size-4" />
+                        </Link>
+                      </Button>
+                    ) : (
+                      <Button
+                        type="button"
+                        disabled
+                        className="mt-5 h-11 cursor-not-allowed rounded-[8px] bg-slate-200 px-6 text-slate-500 opacity-100 shadow-none hover:bg-slate-200"
+                      >
+                        {t('learning.checkout_disabled_cta')}
+                      </Button>
+                    )}
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
         </section>
 
         <section className="py-14 md:py-16">
-          <div className="container mx-auto grid gap-8 px-4 sm:px-6 lg:grid-cols-[0.95fr_1.05fr] lg:px-8">
+          <div className="container mx-auto px-4 sm:px-6 lg:px-8">
             <div className="learning-card p-6 md:p-8">
               <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[#0000FF]/75">{t('learning.target_audience')}</p>
               <h2 className="mt-3 text-3xl font-semibold text-slate-900">{t('learning.target_audience')}</h2>
@@ -344,105 +429,6 @@ const LearningPackagePage = () => {
                     </div>
                   ))}
                 </div>
-              </div>
-            </div>
-
-            <div className="learning-card p-6 md:p-8">
-              <div className="flex items-center justify-between gap-4">
-                <div>
-                  <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[#0000FF]/75">{t('learning.curriculum_preview')}</p>
-                  <h2 className="mt-3 text-3xl font-semibold text-slate-900">{t('learning.curriculum_preview')}</h2>
-                </div>
-                <Badge className="rounded-[8px] bg-slate-100 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-600 shadow-none">
-                  {lessonTotals} {t('learning.lessons_count')}
-                </Badge>
-              </div>
-
-              <div className="mt-6 space-y-4">
-                {modules.map((moduleRecord) => (
-                  <section key={moduleRecord.id} className="learning-subtle-card p-5">
-                    <div className="flex items-start justify-between gap-4">
-                      <div>
-                        <div className="flex flex-wrap items-center gap-2">
-                          <h3 className="text-xl font-semibold text-slate-900">{moduleRecord.title}</h3>
-                          {moduleRecord.isPreview && (
-                            <Badge className="rounded-[8px] bg-[#0000FF]/10 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.14em] text-[#0000FF] shadow-none">
-                              {t('learning.preview_label')}
-                            </Badge>
-                          )}
-                        </div>
-                        <p className="mt-2 text-sm leading-6 text-slate-600">{moduleRecord.description}</p>
-                      </div>
-                      <div className="rounded-[8px] bg-white p-3 text-[#0000FF]">
-                        <BookOpenText className="size-4" />
-                      </div>
-                    </div>
-
-                    <div className="mt-5 space-y-3">
-                      {moduleRecord.lessons.map((lessonRecord) => {
-                        const isPreview = moduleRecord.isPreview || lessonRecord.isPreview;
-                        return (
-                          <div key={lessonRecord.id} className="learning-inline-card flex items-center justify-between gap-3 px-4 py-3">
-                            <div className="flex min-w-0 items-center gap-3">
-                              {isPreview ? (
-                                <PlayCircle className="size-4 shrink-0 text-[#0000FF]" />
-                              ) : (
-                                <LockKeyhole className="size-4 shrink-0 text-slate-400" />
-                              )}
-                      <div className="min-w-0">
-                        <p className="truncate text-sm font-semibold text-slate-900">{lessonRecord.title}</p>
-                        <p className="text-xs text-slate-500">{getMinutesLabel(t, lessonRecord.estimatedMinutes)}</p>
-                      </div>
-                    </div>
-                            <Badge className={`rounded-[8px] px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.14em] shadow-none ${
-                              isPreview ? 'bg-[#0000FF]/10 text-[#0000FF]' : 'bg-slate-100 text-slate-500'
-                            }`}>
-                              {isPreview ? t('learning.preview_label') : t('learning.status_locked')}
-                            </Badge>
-                          </div>
-                        );
-                      })}
-                    </div>
-
-                    <div className="mt-4">
-                      <Button asChild variant="outline" className="h-10 rounded-[8px] border-black/10 bg-white px-5 text-slate-700 shadow-none hover:bg-slate-50">
-                        <Link to={getLearningTopicPath(packageData, moduleRecord)}>{t('learning.open_module')}</Link>
-                      </Button>
-                    </div>
-                  </section>
-                ))}
-              </div>
-
-              <div className="mt-8 rounded-[8px] border border-[#0000FF]/14 bg-[#f6f7ff] p-5">
-                <p className="text-base leading-7 text-slate-600">
-                  {t('learning.package_access_terms')} {t('learning.subscription_clear_terms', {
-                    price: formatLearningPrice(activePrice, packageData.currency, locale),
-                    interval: getBillingIntervalLabel(t, activeInterval),
-                  })}
-                </p>
-                {hasManagedSubscription && (
-                  <p className="mt-3 text-sm text-slate-600">
-                    {hasManagedAccess
-                      ? t('learning.current_subscription_active_body')
-                      : t('learning.current_subscription_inactive_body', { status: statusLabel })}
-                  </p>
-                )}
-                {checkoutEnabled || hasManagedSubscription ? (
-                  <Button asChild className="mt-5 h-11 rounded-[8px] bg-[#0000FF] px-6 text-white shadow-none hover:bg-[#0000CC]">
-                    <Link to={primaryCtaTo} state={!isAuthenticated ? { from: location } : undefined}>
-                      {primaryCtaLabel}
-                      <ArrowRight className="size-4" />
-                    </Link>
-                  </Button>
-                ) : (
-                  <Button
-                    type="button"
-                    disabled
-                    className="mt-5 h-11 cursor-not-allowed rounded-[8px] bg-slate-200 px-6 text-slate-500 opacity-100 shadow-none hover:bg-slate-200"
-                  >
-                    {t('learning.checkout_disabled_cta')}
-                  </Button>
-                )}
               </div>
             </div>
           </div>

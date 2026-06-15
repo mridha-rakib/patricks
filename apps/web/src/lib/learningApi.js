@@ -13,11 +13,13 @@ const getLearningAssetUrl = (relativeUrl) => {
     return normalized;
   }
 
+  const path = normalized.startsWith('/') ? normalized : `/${normalized}`;
+
   if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
-    return `${API_DIRECT_URL}${normalized}`;
+    return `${API_DIRECT_URL}${path}`;
   }
 
-  return `${API_PROXY_URL}${normalized}`;
+  return `${API_PROXY_URL}${path}`;
 };
 
 const withJson = async (response) => {

@@ -4,9 +4,9 @@
   "version": "0.0.0",
   "private": true,
   "scripts": {
-    "dev": "vite --host :: --port 3000 --strictPort",
-    "build": "node tools/build.js",
-    "start": "vite preview --outDir ../../dist/apps/web --host :: --port 3000 --strictPort",
+    "dev": "node init && vite --host :: --port 3000 --strictPort",
+    "build": "node init && node tools/build.js",
+    "start": "node init && vite preview --outDir ../../dist/apps/web --host :: --port 3000 --strictPort",
     "test:e2e": "playwright test",
     "lint": "eslint . --quiet",
     "lint:warn": "eslint ."

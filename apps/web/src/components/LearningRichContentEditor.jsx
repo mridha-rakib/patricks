@@ -13,6 +13,7 @@ import {
   Columns3,
   Heading2,
   Image as ImageIcon,
+  Italic,
   ListPlus,
   Plus,
   Rows3,
@@ -64,7 +65,7 @@ const inlineClassBySize = {
   heading: 'text-2xl leading-tight',
 };
 
-const getSpanKey = (span) => `${span.bold ? '1' : '0'}:${span.size || 'normal'}`;
+const getSpanKey = (span) => `${span.bold ? '1' : '0'}:${span.italic ? '1' : '0'}:${span.size || 'normal'}`;
 
 const escapeHtml = (value) => String(value || '')
   .replace(/&/g, '&amp;')
@@ -76,14 +77,14 @@ const escapeHtml = (value) => String(value || '')
 const getBlockSpans = (block) => (
   Array.isArray(block?.spans) && block.spans.length > 0
     ? block.spans
-    : [{ text: block?.text || '', bold: block?.bold === true, size: block?.size || 'normal' }]
+    : [{ text: block?.text || '', bold: block?.bold === true, italic: block?.italic === true, size: block?.size || 'normal' }]
 );
 
 const getBlockText = (block) => getBlockSpans(block).map((span) => span.text).join('');
 
 const spansToHtml = (spans) => getBlockSpans({ spans })
   .map((span) => (
-    `<span data-bold="${span.bold ? 'true' : 'false'}" data-size="${span.size || 'normal'}" class="${inlineClassBySize[span.size] || inlineClassBySize.normal}${span.bold ? ' font-bold text-slate-900' : ''}">${escapeHtml(span.text)}</span>`
+    `<span data-bold="${span.bold ? 'true' : 'false'}" data-italic="${span.italic ? 'true' : 'false'}" data-size="${span.size || 'normal'}" class="${inlineClassBySize[span.size] || inlineClassBySize.normal}${span.bold ? ' font-bold text-slate-900' : ''}${span.italic ? ' italic' : ''}">${escapeHtml(span.text)}</span>`
   ))
   .join('');
 
@@ -94,6 +95,7 @@ const mergeInlineSpans = (spans) => {
     const normalized = {
       text: span.text,
       bold: span.bold === true,
+      italic: span.italic === true,
       size: sizeOptions.some((option) => option.value === span.size) ? span.size : 'normal',
     };
     const previous = merged.at(-1);
@@ -208,7 +210,7 @@ const restoreSelection = (root, start, end = start) => {
 
 const parseEditorSpans = (root) => {
   const spans = [];
-  const visit = (node, inherited = { bold: false, size: 'normal' }) => {
+  const visit = (node, inherited = { bold: false, italic: false, size: 'normal' }) => {
     if (node.nodeType === Node.TEXT_NODE) {
       if (node.textContent) {
         spans.push({ ...inherited, text: node.textContent });
@@ -219,6 +221,7 @@ const parseEditorSpans = (root) => {
 
     const tagName = node.tagName?.toLowerCase();
     const fontWeight = node.style?.fontWeight || '';
+    const fontStyle = node.style?.fontStyle || '';
     const fontSize = node.getAttribute?.('size');
     const next = {
       bold: node.dataset?.bold === 'true'
@@ -227,6 +230,11 @@ const parseEditorSpans = (root) => {
         || fontWeight === 'bold'
         || Number.parseInt(fontWeight, 10) >= 600
         || inherited.bold,
+      italic: node.dataset?.italic === 'true'
+        || tagName === 'i'
+        || tagName === 'em'
+        || fontStyle === 'italic'
+        || inherited.italic,
       size: node.dataset?.size || valueByEditorFontSize[fontSize] || inherited.size,
     };
     node.childNodes.forEach((child) => visit(child, next));
@@ -242,7 +250,7 @@ const getSelectionStyle = (block, selection) => {
   const start = Math.max(0, Math.min(selection?.start ?? 0, selection?.end ?? 0, fullText.length));
   const end = Math.max(0, Math.min(selection?.end ?? 0, fullText.length));
   if (start === end) {
-    return { bold: false, size: 'normal', hasSelection: false };
+    return { bold: false, italic: false, size: 'normal', hasSelection: false };
   }
 
   let cursor = 0;
@@ -259,6 +267,7 @@ const getSelectionStyle = (block, selection) => {
   const sameSize = selectedSpans.every((span) => span.size === first.size);
   return {
     bold: selectedSpans.length > 0 && selectedSpans.every((span) => span.bold === true),
+    italic: selectedSpans.length > 0 && selectedSpans.every((span) => span.italic === true),
     size: sameSize ? first.size || 'normal' : 'normal',
     hasSelection: selectedSpans.length > 0,
   };
@@ -272,6 +281,7 @@ const getStyleAtOffset = (block, offset) => {
     if (offset <= nextCursor) {
       return {
         bold: span.bold === true,
+        italic: span.italic === true,
         size: span.size || 'normal',
         hasSelection: false,
       };
@@ -281,6 +291,7 @@ const getStyleAtOffset = (block, offset) => {
   const last = spans.at(-1) || {};
   return {
     bold: last.bold === true,
+    italic: last.italic === true,
     size: last.size || 'normal',
     hasSelection: false,
   };
@@ -319,7 +330,7 @@ const ParagraphRichEditor = forwardRef(({ block, onChange, onSelect, onStyleChan
     const nextSpans = parseEditorSpans(root);
     const normalizedSpans = nextSpans.length > 0
       ? nextSpans
-      : [{ text: '', bold: false, size: 'normal' }];
+      : [{ text: '', bold: false, italic: false, size: 'normal' }];
     const nextBlock = {
       ...blockRef.current,
       text: normalizedSpans.map((span) => span.text).join(''),
@@ -369,6 +380,8 @@ const ParagraphRichEditor = forwardRef(({ block, onChange, onSelect, onStyleChan
     document.execCommand('styleWithCSS', false, false);
     if (format === 'bold') {
       document.execCommand('bold', false);
+    } else if (format === 'italic') {
+      document.execCommand('italic', false);
     } else {
       document.execCommand('fontSize', false, editorFontSizeByValue[format] || editorFontSizeByValue.normal);
     }
@@ -378,8 +391,9 @@ const ParagraphRichEditor = forwardRef(({ block, onChange, onSelect, onStyleChan
     onSelect(nextSelection);
     onStyleChange?.({
       bold: document.queryCommandState('bold'),
+      italic: document.queryCommandState('italic'),
       size: valueByEditorFontSize[String(document.queryCommandValue('fontSize') || '')]
-        || (format === 'bold' ? getStyleAtOffset(nextBlock, nextSelection.end).size : format),
+        || (['bold', 'italic'].includes(format) ? getStyleAtOffset(nextBlock, nextSelection.end).size : format),
       hasSelection: nextSelection.start !== nextSelection.end,
     });
   };
@@ -406,6 +420,10 @@ const ParagraphRichEditor = forwardRef(({ block, onChange, onSelect, onStyleChan
         if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === 'b') {
           event.preventDefault();
           formatSelection('bold');
+        }
+        if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === 'i') {
+          event.preventDefault();
+          formatSelection('italic');
         }
       }}
       data-placeholder="Write lesson content..."
@@ -471,7 +489,7 @@ const LearningRichContentEditor = ({
   const selectedRange = selectionByBlockId[selectedBlock?.id] || null;
   const selectedRangeStyle = selectedBlock?.type === 'paragraph'
     ? getSelectionStyle(selectedBlock, selectedRange)
-    : { bold: false, size: 'normal', hasSelection: false };
+    : { bold: false, italic: false, size: 'normal', hasSelection: false };
   const selectedStyle = selectedRangeStyle.hasSelection
     ? selectedRangeStyle
     : typingStyleByBlockId[selectedBlock?.id] || selectedRangeStyle;
@@ -511,6 +529,7 @@ const LearningRichContentEditor = ({
       ...current,
       [blockId]: {
         bold: style?.bold === true,
+        italic: style?.italic === true,
         size: sizeOptions.some((option) => option.value === style?.size) ? style.size : 'normal',
         hasSelection: style?.hasSelection === true,
       },
@@ -531,7 +550,9 @@ const LearningRichContentEditor = ({
 
     const patch = format === 'bold'
       ? { bold: !getSelectionStyle(activeBlock, range).bold }
-      : { size: format };
+      : format === 'italic'
+        ? { italic: !getSelectionStyle(activeBlock, range).italic }
+        : { size: format };
     selectionByBlockIdRef.current = {
       ...selectionByBlockIdRef.current,
       [activeBlock.id]: range,
@@ -639,6 +660,15 @@ const LearningRichContentEditor = ({
           onClick={() => applyParagraphFormat('bold')}
         >
           <Bold className="size-4" />
+        </ToolbarButton>
+        <ToolbarButton
+          label="Italic"
+          active={selectedStyle.italic}
+          disabled={selectedBlock?.type !== 'paragraph'}
+          onMouseDown={(event) => event.preventDefault()}
+          onClick={() => applyParagraphFormat('italic')}
+        >
+          <Italic className="size-4" />
         </ToolbarButton>
         <div className="flex h-9 overflow-hidden rounded-[8px] border border-black/10 bg-white" role="group" aria-label="Text size">
           {sizeOptions.map((option) => (

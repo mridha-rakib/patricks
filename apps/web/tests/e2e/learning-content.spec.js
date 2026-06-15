@@ -39,8 +39,28 @@ const lessonPayload = {
         id: 'rich_heading',
         type: 'paragraph',
         text: 'Road-to-Z3 is built as a web-based learning path.',
+        spans: [{
+          text: 'Road-to-Z3 is built as a web-based learning path.',
+          size: 'heading',
+          bold: true,
+          italic: false,
+        }],
         size: 'heading',
         bold: true,
+      },
+      {
+        id: 'rich_inline',
+        type: 'paragraph',
+        text: 'Bold terms and italic emphasis stay formatted.',
+        spans: [
+          { text: 'Bold terms', size: 'normal', bold: true, italic: false },
+          { text: ' and ', size: 'normal', bold: false, italic: false },
+          { text: 'italic emphasis', size: 'normal', bold: false, italic: true },
+          { text: ' stay formatted.', size: 'normal', bold: false, italic: false },
+        ],
+        size: 'normal',
+        bold: false,
+        italic: false,
       },
       {
         id: 'rich_small',
@@ -48,6 +68,11 @@ const lessonPayload = {
         text: 'Each page keeps the learning sequence readable.',
         size: 'small',
         bold: false,
+      },
+      {
+        id: 'rich_list',
+        type: 'list',
+        items: ['Orientation', 'Core points', 'Next step'],
       },
       {
         id: 'rich_image',
@@ -115,6 +140,17 @@ test.describe('Road-to-Z3 web learning pages', () => {
       await route.fulfill({ json: packagePayload });
     });
 
+    await page.route('https://example.com/editor-test.png', async (route) => {
+      await route.fulfill({
+        status: 200,
+        contentType: 'image/png',
+        body: Buffer.from(
+          'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+/p9sAAAAASUVORK5CYII=',
+          'base64',
+        ),
+      });
+    });
+
     await page.route((url) => (
       url.pathname === '/hcgi/api/learning/lessons/lesson_r2z_start'
       || (url.port === '3001' && url.pathname === '/learning/lessons/lesson_r2z_start')
@@ -171,12 +207,18 @@ test.describe('Road-to-Z3 web learning pages', () => {
     await expect(page.getByText('Web learning page')).toBeVisible();
     await expect(page.getByRole('heading', { name: 'Learning content' })).toBeVisible();
     await expect(page.getByText('Road-to-Z3 is built as a web-based learning path.')).toHaveClass(/font-bold/);
+    await expect(page.getByText('Bold terms')).toHaveClass(/font-bold/);
+    await expect(page.getByText('italic emphasis')).toHaveClass(/italic/);
     await expect(page.getByText('Each page keeps the learning sequence readable')).toBeVisible();
-    await expect(page.getByRole('img', { name: 'Editor QA inline image' })).toBeVisible();
+    const inlineImage = page.getByRole('img', { name: 'Editor QA inline image' });
+    await expect(inlineImage).toBeVisible();
+    await expect(inlineImage).toHaveAttribute('src', 'https://example.com/editor-test.png');
+    await expect.poll(async () => inlineImage.evaluate((image) => image.naturalWidth)).toBeGreaterThan(0);
     await expect(page.getByText('Inline image stays inside the lesson.')).toBeVisible();
+    await expect(page.locator('.learning-rich-content ul').filter({ hasText: 'Core points' })).toBeVisible();
     await expect(page.getByRole('columnheader', { name: 'Phase' })).toBeVisible();
     await expect(page.getByRole('cell', { name: 'Core points' })).toBeVisible();
-    await expect(page.getByText('4 sections')).toBeVisible();
+    await expect(page.getByText('6 sections')).toBeVisible();
     await expect(page.getByText('Lesson notes')).toHaveCount(0);
     await expect(page.getByText('Made by')).toHaveCount(0);
     await expect(page.getByText('1. Auflage 2026')).toHaveCount(0);
