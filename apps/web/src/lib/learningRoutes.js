@@ -1,5 +1,23 @@
 const encodePathPart = (value) => encodeURIComponent(String(value || '').trim());
 
+export const getLearningCheckoutPath = (packageData, billingCycle = 'month', extraParams = {}) => {
+  const packageSlug = typeof packageData === 'string' ? packageData : packageData?.slug;
+  const normalizedBillingCycle = billingCycle === 'year' ? 'year' : 'month';
+
+  if (!packageSlug) {
+    return '/learning/packages';
+  }
+
+  const params = new URLSearchParams({
+    cycle: normalizedBillingCycle,
+    ...Object.fromEntries(
+      Object.entries(extraParams).filter(([, value]) => value !== undefined && value !== null && value !== ''),
+    ),
+  });
+
+  return `/learning/subscribe/${encodePathPart(packageSlug)}?${params.toString()}`;
+};
+
 export const getLearningTopicPath = (packageData, moduleRecord) => {
   const packageSlug = typeof packageData === 'string' ? packageData : packageData?.slug;
   const topicSlug = moduleRecord?.slug;

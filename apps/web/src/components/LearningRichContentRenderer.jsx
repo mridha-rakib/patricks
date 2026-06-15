@@ -153,17 +153,17 @@ const LearningRichContentRenderer = ({
 
         const spans = Array.isArray(block.spans) && block.spans.length > 0
           ? block.spans
-          : [{ text: block.text, bold: block.bold, size: block.size }];
+          : [{ text: block.text, bold: block.bold, italic: block.italic, size: block.size }];
         const hasInlineFormatting = spans.length > 1
-          || spans.some((span) => span.bold !== block.bold || span.size !== block.size);
+          || spans.some((span) => span.bold !== block.bold || span.italic !== block.italic || span.size !== block.size);
         const classNameForSize = paragraphClassBySize[block.size] || paragraphClassBySize.normal;
         return (
           <section key={block.id} className="border-l-2 border-[#0000FF]/18 pl-5">
-            <p className={hasInlineFormatting ? 'text-base leading-8 text-slate-700' : `${classNameForSize} ${block.bold ? 'font-bold' : ''}`}>
+            <p className={hasInlineFormatting ? 'text-base leading-8 text-slate-700' : `${classNameForSize} ${block.bold ? 'font-bold' : ''} ${block.italic ? 'italic' : ''}`}>
               {spans.map((span, index) => (
                 <span
                   key={`${block.id}-span-${index}`}
-                  className={`${inlineClassBySize[span.size] || inlineClassBySize.normal} ${span.bold ? 'font-bold text-slate-900' : ''}`}
+                  className={`${inlineClassBySize[span.size] || inlineClassBySize.normal} ${span.bold ? 'font-bold text-slate-900' : ''} ${span.italic ? 'italic' : ''}`}
                 >
                   {span.text}
                 </span>

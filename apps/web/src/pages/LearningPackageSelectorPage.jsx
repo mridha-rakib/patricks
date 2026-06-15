@@ -6,6 +6,7 @@ import { Badge } from '@/components/ui/badge.jsx';
 import { Button } from '@/components/ui/button.jsx';
 import { listLearningPackages } from '@/lib/learningApi.js';
 import { localizeLearningPackageList } from '@/lib/learningContentLocalization.js';
+import { getLearningCheckoutPath } from '@/lib/learningRoutes.js';
 import { useTranslation } from '@/contexts/TranslationContext.jsx';
 
 const Z3_PACKAGES = [
@@ -175,7 +176,7 @@ const LearningPackageSelectorPage = () => {
                       </Button>
                     ) : (
                       <Button asChild className={`h-10 w-full rounded-[8px] text-xs font-semibold shadow-none ${item.buttonClassName}`}>
-                        <Link to={`/learning/subscribe/${checkoutSlug}?cycle=month`}>
+                        <Link to={getLearningCheckoutPath(checkoutSlug, 'month')}>
                           {t(item.ctaKey)}
                         </Link>
                       </Button>
