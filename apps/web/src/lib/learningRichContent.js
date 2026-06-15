@@ -70,6 +70,7 @@ export const normalizeInlineSpans = (spans, fallbackText = '', fallback = {}) =>
     .map((span) => ({
       text: String(span?.text || '').slice(0, 12000),
       bold: span?.bold === true,
+      italic: span?.italic === true,
       size: LEARNING_RICH_TEXT_SIZES.includes(span?.size) ? span.size : 'normal',
     }))
     .filter((span) => span.text.length > 0);
@@ -77,7 +78,7 @@ export const normalizeInlineSpans = (spans, fallbackText = '', fallback = {}) =>
   const merged = [];
   for (const span of normalized) {
     const previous = merged.at(-1);
-    if (previous && previous.bold === span.bold && previous.size === span.size) {
+    if (previous && previous.bold === span.bold && previous.italic === span.italic && previous.size === span.size) {
       previous.text += span.text;
     } else {
       merged.push({ ...span });
@@ -136,6 +137,7 @@ export const normalizeLearningRichBlocks = (blocks, fallbackText = '', { preserv
       const text = String(block?.text || '').slice(0, 12000);
       const spans = normalizeInlineSpans(block?.spans, text, {
         bold: block?.bold === true,
+        italic: block?.italic === true,
         size,
       });
       return {
@@ -145,6 +147,7 @@ export const normalizeLearningRichBlocks = (blocks, fallbackText = '', { preserv
         spans,
         size,
         bold: block?.bold === true,
+        italic: block?.italic === true,
       };
     })
     .filter((block) => {
